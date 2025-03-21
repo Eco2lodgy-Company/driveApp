@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useContext,useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -14,43 +15,58 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWindowDimensions } from 'react-native';
-
+import { AuthContext } from "../AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";  
+import { Alert } from 'react-native';
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { width, height } = useWindowDimensions();
+  const router = useRouter();
 
-  const handleLogin = async () => {
+  const { login } = useContext(AuthContext);
+
+
+  const getUserData = async () => {
     try {
-      setIsLoading(true);
-      setError('');
-
-      const response = await fetch('https://api.drive.re/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Erreur de connexion');
+      const userData = await AsyncStorage.getItem("user");
+      if (userData !== null) {
+        return JSON.parse(userData); // Convertir la chaîne JSON en objet
       }
-
-      console.log('Connexion réussie:', data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      return null;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données :", error);
+      return null;
     }
   };
+
+
+
+  const handleLogin = async () => {
+    const response = await login(email, password);
+  
+    if (response?.message) {
+      console.log(response.message); // Afficher une alerte
+    } else {
+      const userRole = await getUserData();
+      console.log("Utilisateur récupéré :", userRole);
+  
+      if (userRole && userRole.role) { // Vérification avant d'accéder à `.role`
+        if (userRole.role === "Vendeur") {
+          router.push("/vendeurs/home");
+        } else if (userRole.role === "Client") {
+          router.push("/clients/home");
+        } else if (userRole.role === "Livreur") {
+          router.push("/deliverer/home");
+        }
+      } else {
+        console.error("Erreur : Données utilisateur incorrectes !");
+      }
+    }
+  };
+  
 
   return (
     <KeyboardAvoidingView
