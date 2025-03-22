@@ -33,6 +33,8 @@ const SellerSignupScreen = () => {
     phone: '',
     adress: '',
     email: '',
+    latitude: location ? location.latitude : null,
+  longitude: location ? location.longitude : null,
     role: 'Vendeur',
     password: '',
     confirmPassword: '',
@@ -78,41 +80,42 @@ const SellerSignupScreen = () => {
   };
 
   const handleStart = async () => {
-    try {
-      setIsLoading(true);
-      console.log('Données à envoyer:', formData);
+    // try {
+    //   setIsLoading(true);
+    //   console.log('Données à envoyer:', formData);
 
-      const response = await fetch(`http://195.35.24.128:8081/api/user/new`, {
-        method: 'POST',
-        headers: {
-        //   'Authorization': `Bearer ${JWT_SECRET}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+    //   const response = await fetch(`http://195.35.24.128:8081/api/user/new`, {
+    //     method: 'POST',
+    //     headers: {
+    //     //   'Authorization': `Bearer ${JWT_SECRET}`,
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(formData),
+    //   });
 
-      const data = await response.json();
-      console.log('Réponse API:', data);
+    //   const data = await response.json();
+    //   console.log('Réponse API:', data);
 
-      if (response.ok) {
-        setIsLoading(false);
-        setShowSuccess(true);
+    //   if (response.ok) {
+    //     setIsLoading(false);
+    //     setShowSuccess(true);
 
-        Animated.timing(successAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start(() => {
-          setTimeout(() => {
-            router.push('/sellers/ShopCreationScreen');
-          }, 1500);
-        });
-      }
+    //     Animated.timing(successAnim, {
+    //       toValue: 1,
+    //       duration: 500,
+    //       useNativeDriver: true,
+    //     }).start(() => {
+    //       setTimeout(() => {
+    //         router.push('/sellers/ShopCreationScreen');
+    //       }, 1500);
+    //     });
+    //   }
 
-    } catch (error) {
-      console.error('Erreur lors de la requête POST:', error);
-      setIsLoading(false);
-    }
+    // } catch (error) {
+    //   console.error('Erreur lors de la requête POST:', error);
+    //   setIsLoading(false);
+    // }
+    console.log(formData);
   };
 
   return (
@@ -325,119 +328,161 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: '5%', // Utilisation de pourcentage au lieu de valeur fixe
+    paddingVertical: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: '10%', // Utilisation de pourcentage relatif
   },
   title: {
-    fontSize: 36,
+    fontSize: Platform.select({
+      ios: 36,
+      android: 32,
+    }), // Tailles différentes selon la plateforme
     fontWeight: '900',
     color: '#fff',
     textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 12,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: Platform.select({
+      ios: 18,
+      android: 16,
+    }),
     color: '#D1FAE5',
     marginTop: 8,
     fontWeight: '500',
     opacity: 0.9,
+    textAlign: 'center',
   },
   formContainer: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 480, // Augmentation légère pour grands écrans
     alignItems: 'center',
+    paddingHorizontal: '2%',
   },
   inputCard: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
     borderRadius: 24,
-    padding: 20,
+    padding: '5%', // Padding relatif
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 15 },
     shadowOpacity: 0.25,
     shadowRadius: 25,
-    elevation: 12,
+    elevation: Platform.select({
+      android: 12,
+      ios: 8,
+    }),
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: '4%', // Espacement relatif
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
+    minHeight: 50, // Hauteur minimale pour petits écrans
   },
   inputIcon: {
-    marginLeft: 12,
+    marginLeft: '3%',
+    marginRight: '2%',
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: Platform.select({
+      ios: 14,
+      android: 12,
+    }),
     paddingHorizontal: 12,
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 14,
+    }),
     color: '#111827',
+    minHeight: 48,
   },
   successMessage: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.9)',
-    padding: 15,
+    padding: '4%',
     borderRadius: 12,
-    marginTop: 20,
-    marginBottom: 20,
+    marginVertical: '5%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+    width: '100%',
   },
   successText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 14,
+    }),
     fontWeight: '600',
     marginLeft: 10,
+    flex: 1,
   },
   buttonWrapper: {
     width: '100%',
-    marginTop: 28,
+    marginTop: '7%',
+    paddingHorizontal: '10%',
   },
   signupButton: {
     borderRadius: 16,
     overflow: 'hidden',
+    width: '100%',
   },
   buttonGradient: {
-    paddingVertical: 16,
+    paddingVertical: Platform.select({
+      ios: 16,
+      android: 14,
+    }),
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
+    minHeight: 56,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: Platform.select({
+      ios: 18,
+      android: 16,
+    }),
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: '6%',
+    marginBottom: '5%',
   },
   footerText: {
-    fontSize: 15,
+    fontSize: Platform.select({
+      ios: 15,
+      android: 14,
+    }),
     color: '#fff',
     opacity: 0.8,
   },
   footerLink: {
-    fontSize: 15,
+    fontSize: Platform.select({
+      ios: 15,
+      android: 14,
+    }),
     color: '#FCD34D',
     fontWeight: '700',
     marginLeft: 6,
@@ -447,7 +492,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
+    height: '25%', // Hauteur relative
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
   },

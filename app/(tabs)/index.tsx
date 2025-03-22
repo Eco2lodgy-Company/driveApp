@@ -2,6 +2,7 @@ import { ImageBackground, StyleSheet, Text, TouchableOpacity, View, Animated } f
 import React, { useEffect, useRef } from "react";
 import { Link, Stack } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { LocationContext } from "@/LocationContext";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const WelcomeScreen = () => {
