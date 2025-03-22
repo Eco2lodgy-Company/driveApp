@@ -1,4 +1,4 @@
-import React, { useContext,useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -16,57 +16,64 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWindowDimensions } from 'react-native';
 import { AuthContext } from "../AuthContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";  
-import { Alert } from 'react-native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const { width, height } = useWindowDimensions();
   const router = useRouter();
-
   const { login } = useContext(AuthContext);
-
 
   const getUserData = async () => {
     try {
       const userData = await AsyncStorage.getItem("user");
-      if (userData !== null) {
-        return JSON.parse(userData); // Convertir la chaîne JSON en objet
-      }
-      return null;
+      return userData !== null ? JSON.parse(userData) : null;
     } catch (error) {
       console.error("Erreur lors de la récupération des données :", error);
       return null;
     }
   };
 
-
-
   const handleLogin = async () => {
-    const response = await login(email, password);
-  
-    if (response?.message) {
-      console.log(response.message); // Afficher une alerte
-    } else {
-      const userRole = await getUserData();
-      console.log("Utilisateur récupéré :", userRole);
-  
-      if (userRole && userRole.role) { // Vérification avant d'accéder à `.role`
-        if (userRole.role === "Vendeur") {
-          router.push("/vendeurs/home");
-        } else if (userRole.role === "Client") {
-          router.push("/clients/home");
-        } else if (userRole.role === "Livreur") {
-          router.push("/deliverer/home");
-        }
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await login(email, password);
+      
+      if (response?.message) {
+        setError(response.message);
       } else {
-        console.error("Erreur : Données utilisateur incorrectes !");
+        const userRole = await getUserData();
+        
+        if (userRole && userRole.role) {
+          setSuccess('Connexion réussie ! Redirection en cours...');
+          
+          setTimeout(() => {
+            if (userRole.role === "Vendeur") {
+              router.push("/vendeurs/home");
+            } else if (userRole.role === "Client") {
+              router.push("/clients/home");
+            } else if (userRole.role === "Livreur") {
+              router.push("/deliverer/home");
+            }
+          }, 2000);
+        } else {
+          setError("Erreur : Identifants incorrects");
+        }
       }
+    } catch (error) {
+      setError("Une erreur est survenue lors de la connexion");
+      console.error("Erreur de connexion :", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
 
   return (
     <KeyboardAvoidingView
@@ -74,7 +81,7 @@ const LoginScreen = () => {
       style={styles.container}
     >
       <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }} // Exemple d'image
+        source={{ uri: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }}
         style={styles.backgroundImage}
       >
         <LinearGradient
@@ -83,15 +90,14 @@ const LoginScreen = () => {
         >
           <StatusBar barStyle="light-content" />
 
-          {/* Header */}
           <View style={[styles.header, { marginTop: height * 0.1 }]}>
             <Text style={styles.appName}>drive.re</Text>
             <Text style={styles.tagline}>Shopping nouvelle génération</Text>
           </View>
 
-          {/* Formulaire */}
           <View style={[styles.formContainer, { width: width * 0.9, maxWidth: 400 }]}>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {success ? <Text style={styles.successText}>{success}</Text> : null}
 
             <TextInput
               style={styles.input}
@@ -231,6 +237,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 15,
     fontSize: 14,
+  },
+  successText: {
+    color: '#2ecc71',
+    textAlign: 'center',
+    marginBottom: 15,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 
