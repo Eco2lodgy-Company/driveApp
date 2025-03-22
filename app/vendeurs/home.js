@@ -1,5 +1,5 @@
 // SellerDashboardScreen.js
-import React, { useEffect, useRef } from 'react';
+import React, { useContext,useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,18 @@ import {
   FlatList,
   Animated,
 } from 'react-native';
+import { AuthContext } from '../../AuthContext';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SellerDashboardScreen = () => {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
-
+const { user } = useContext(AuthContext);
   const stats = {
     totalSales: 2450.75,
     pendingOrders: 8,
@@ -96,7 +98,7 @@ const SellerDashboardScreen = () => {
           style={styles.headerGradient}
         >
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Dashboard</Text>
+            <Text style={styles.headerTitle}>{user.email}</Text>
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => router.push('/sellers/profile')}
