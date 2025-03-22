@@ -27,18 +27,30 @@ const SellerSignupScreen = () => {
   const buttonScale = useRef(new Animated.Value(1)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
   const { location, errorMsg } = useContext(LocationContext);
+  
   const [formData, setFormData] = useState({
     name: '',
     prenom: '',
     phone: '',
     adress: '',
     email: '',
-    latitude: location ? location.latitude : null,
-  longitude: location ? location.longitude : null,
+    userLat: null,
+  userLong: location ? location.longitude : null,
     role: 'Vendeur',
     password: '',
     confirmPassword: '',
   });
+
+  useEffect(() => {
+    if (location) {
+      console.log("Mise à jour de la position :", location);
+      setFormData((prevData) => ({
+        ...prevData,
+        userLat: location.latitude,
+        userLong: location.longitude,
+      }));
+    }
+  }, [location]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
