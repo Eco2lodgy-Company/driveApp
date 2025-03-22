@@ -105,12 +105,11 @@ const SellerSignupScreen = () => {
         useNativeDriver: true,
     }).start(() => {
         setTimeout(() => {
-            // Redirection en incluant les données dans l'URL
-            router.push(`/sellers/ShopCreationScreen?data=${encodedData}`);
+            // Redirection avec les données encodées sous forme de chaîne dans l'URL
+            router.push(`vendeurs/shopCreationScreen?data=${encodedData}`);
         }, 1500);
     });
 };
-
 
   return (
     <SafeAreaView style={styles.safeContainer}>

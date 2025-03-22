@@ -1,5 +1,5 @@
 // ShopCreationScreen.js
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,40 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
 //import BottomNavigation from '../clients/components/BottomNavigation';
 
 const ShopCreationScreen = () => {
   const router = useRouter();
+    const [formData, setFormData] = useState(null);
+
+    useEffect(() => {
+      let isMounted = true; // Variable pour vérifier si le composant est monté
+  
+      if (router.isReady && router.query && router.query.data) {
+        try {
+          // Décoder les données reçues dans l'URL
+          const decodedData = JSON.parse(decodeURIComponent(router.query.data));
+  
+          // Mettre à jour l'état uniquement si le composant est monté
+          if (isMounted) {
+            setFormData(decodedData);
+            console.log("Données reçues:", decodedData);
+          }
+        } catch (error) {
+          console.error('Erreur de parsing des données:', error);
+        }
+      }
+  
+      // Nettoyage : lorsque le composant est démonté, on met à jour `isMounted` à false
+      return () => {
+        isMounted = false;
+      };
+    }, [router.isReady, router.query]);
+  console.log(JSON.stringify(formData));
+  
 
   // État pour les champs du formulaire
   const [shopData, setShopData] = useState({
