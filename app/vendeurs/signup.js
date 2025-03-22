@@ -92,43 +92,25 @@ const SellerSignupScreen = () => {
   };
 
   const handleStart = async () => {
-    // try {
-    //   setIsLoading(true);
-    //   console.log('Données à envoyer:', formData);
+    console.log('Données à envoyer:', formData);
 
-    //   const response = await fetch(`http://195.35.24.128:8081/api/user/new`, {
-    //     method: 'POST',
-    //     headers: {
-    //     //   'Authorization': `Bearer ${JWT_SECRET}`,
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: JSON.stringify(formData),
-    //   });
+    // Convertir l'objet en JSON encodé
+    const encodedData = encodeURIComponent(JSON.stringify(formData));
 
-    //   const data = await response.json();
-    //   console.log('Réponse API:', data);
+    // Lancer l'animation avant la redirection
+    setShowSuccess(true);
+    Animated.timing(successAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+    }).start(() => {
+        setTimeout(() => {
+            // Redirection en incluant les données dans l'URL
+            router.push(`/sellers/ShopCreationScreen?data=${encodedData}`);
+        }, 1500);
+    });
+};
 
-    //   if (response.ok) {
-    //     setIsLoading(false);
-    //     setShowSuccess(true);
-
-    //     Animated.timing(successAnim, {
-    //       toValue: 1,
-    //       duration: 500,
-    //       useNativeDriver: true,
-    //     }).start(() => {
-    //       setTimeout(() => {
-    //         router.push('/sellers/ShopCreationScreen');
-    //       }, 1500);
-    //     });
-    //   }
-
-    // } catch (error) {
-    //   console.error('Erreur lors de la requête POST:', error);
-    //   setIsLoading(false);
-    // }
-    console.log(formData);
-  };
 
   return (
     <SafeAreaView style={styles.safeContainer}>
