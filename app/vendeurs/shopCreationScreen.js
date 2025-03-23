@@ -257,8 +257,8 @@ const ShopCreationScreen = () => {
 
       console.log('Résultat parsé :', result);
       Alert.alert('Succès', 'Boutique créée avec succès !');
-      console.log('Tentative de redirection vers /sellers/dashboard');
-      router.push('/sellers/dashboard');
+      console.log('Tentative de redirection vers /Vendeurs/home');
+      router.push('/vendeurs/home');
     } catch (error) {
       console.error('Erreur dans handleCreateShop :', error);
       Alert.alert('Erreur', error.message || 'Échec de la création de la boutique.');
