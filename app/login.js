@@ -5,11 +5,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-  Dimensions,
   ActivityIndicator,
   ImageBackground,
 } from 'react-native';
@@ -17,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useWindowDimensions } from 'react-native';
 import { AuthContext } from "../AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import tw from 'twrnc'; // Assurez-vous d'avoir installé twrnc : npm install twrnc
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -24,7 +23,7 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const { login } = useContext(AuthContext);
 
@@ -78,29 +77,44 @@ const LoginScreen = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={tw`flex-1`}
     >
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }}
-        style={styles.backgroundImage}
+        style={tw`flex-1 w-full h-full`}
       >
         <LinearGradient
-          colors={['rgba(255, 98, 0, 0.85)', 'rgba(255, 140, 0, 0.85)', 'rgba(255, 167, 38, 0.85)']}
-          style={styles.gradient}
+          colors={['rgba(255, 98, 0, 0.9)', 'rgba(255, 140, 0, 0.85)', 'rgba(255, 167, 38, 0.8)']}
+          style={tw`flex-1 items-center justify-center py-10`}
         >
           <StatusBar barStyle="light-content" />
 
-          <View style={[styles.header, { marginTop: height * 0.1 }]}>
-            <Text style={styles.appName}>drive.re</Text>
-            <Text style={styles.tagline}>Shopping nouvelle génération</Text>
+          {/* Header */}
+          <View style={tw`items-center mb-12 mt-16`}>
+            <Text style={tw`text-4xl md:text-5xl font-extrabold text-white uppercase tracking-wide shadow-md`}>
+              drive.re
+            </Text>
+            <Text style={tw`text-sm md:text-base text-white opacity-80 italic mt-2`}>
+              Shopping nouvelle génération
+            </Text>
           </View>
 
-          <View style={[styles.formContainer, { width: width * 0.9, maxWidth: 400 }]}>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            {success ? <Text style={styles.successText}>{success}</Text> : null}
+          {/* Form Container */}
+          <View style={tw`bg-white/95 rounded-3xl p-6 w-11/12 max-w-md shadow-xl border border-gray-100`}>
+            {error ? (
+              <Text style={tw`text-red-600 text-center mb-4 text-sm font-medium`}>
+                {error}
+              </Text>
+            ) : null}
+            {success ? (
+              <Text style={tw`text-green-500 text-center mb-4 text-sm font-bold`}>
+                {success}
+              </Text>
+            ) : null}
 
+            {/* Inputs */}
             <TextInput
-              style={styles.input}
+              style={tw`bg-gray-50 rounded-xl p-4 mb-4 text-base text-gray-800 border border-gray-200 shadow-sm`}
               placeholder="Adresse email"
               placeholderTextColor="#888"
               value={email}
@@ -108,9 +122,8 @@ const LoginScreen = () => {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-
             <TextInput
-              style={styles.input}
+              style={tw`bg-gray-50 rounded-xl p-4 mb-4 text-base text-gray-800 border border-gray-200 shadow-sm`}
               placeholder="Mot de passe"
               placeholderTextColor="#888"
               value={password}
@@ -118,26 +131,35 @@ const LoginScreen = () => {
               secureTextEntry
             />
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+            {/* Forgot Password */}
+            <TouchableOpacity style={tw`self-end mb-6`}>
+              <Text style={tw`text-orange-500 text-sm font-medium underline`}>
+                Mot de passe oublié ?
+              </Text>
             </TouchableOpacity>
 
+            {/* Login Button */}
             <TouchableOpacity
-              style={styles.loginButton}
+              style={tw`bg-orange-500 rounded-xl py-4 items-center shadow-lg`}
               onPress={handleLogin}
               disabled={isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Connexion</Text>
+                <Text style={tw`text-white text-lg font-bold tracking-wide`}>
+                  Connexion
+                </Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.signupButton}>
-              <Text style={styles.signupText}>
+            {/* Signup Link */}
+            <TouchableOpacity style={tw`mt-6 items-center`}>
+              <Text style={tw`text-gray-600 text-sm`}>
                 Nouveau client ?{' '}
-                <Text style={styles.signupLink}>Créer un compte</Text>
+                <Text style={tw`text-orange-500 font-semibold underline`}>
+                  Créer un compte
+                </Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -146,105 +168,5 @@ const LoginScreen = () => {
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  appName: {
-    fontSize: Dimensions.get('window').width > 600 ? 48 : 36,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
-  tagline: {
-    fontSize: Dimensions.get('window').width > 600 ? 18 : 14,
-    color: '#fff',
-    opacity: 0.9,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderRadius: 20,
-    padding: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
-    alignSelf: 'center',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-    width: '100%',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotText: {
-    color: '#ff6200',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loginButton: {
-    backgroundColor: '#ff6200',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  signupButton: {
-    alignItems: 'center',
-  },
-  signupText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  signupLink: {
-    color: '#ff6200',
-    fontWeight: 'bold',
-  },
-  errorText: {
-    color: '#d32f2f',
-    textAlign: 'center',
-    marginBottom: 15,
-    fontSize: 14,
-  },
-  successText: {
-    color: '#2ecc71',
-    textAlign: 'center',
-    marginBottom: 15,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
 
 export default LoginScreen;

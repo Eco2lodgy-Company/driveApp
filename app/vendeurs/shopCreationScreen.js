@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Feather';
+import { AuthContext } from '../../AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // Ajout de la bibliothèque pour gérer les fichiers
 
@@ -23,7 +24,7 @@ const ShopCreationScreen = () => {
   const [userGetData, setUserGetData] = useState(null);
   const [loginSessionData, setLoginSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
+const {login} = useContext(AuthContext);
   const [shopData, setShopData] = useState({
     email: '',
     nom: '',
@@ -258,7 +259,15 @@ const ShopCreationScreen = () => {
       console.log('Résultat parsé :', result);
       Alert.alert('Succès', 'Boutique créée avec succès !');
       console.log('Tentative de redirection vers /Vendeurs/home');
-      router.push('/vendeurs/home');
+      //login(formData.email, formData.password);
+        const Loginresponse = await login(formData.email, formData);
+        if (Loginresponse?.message) {
+          Alert.alert(Loginresponse.message);
+        }else{
+          router.push('/vendeurs/home');
+        }
+
+      
     } catch (error) {
       console.error('Erreur dans handleCreateShop :', error);
       Alert.alert('Erreur', error.message || 'Échec de la création de la boutique.');
