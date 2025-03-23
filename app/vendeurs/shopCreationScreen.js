@@ -1,5 +1,4 @@
-// ShopCreationScreen.js
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,49 +10,79 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import Icon from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-//import BottomNavigation from '../clients/components/BottomNavigation';
+import * as FileSystem from 'expo-file-system'; // Ajout de la bibliothèque pour gérer les fichiers
 
 const ShopCreationScreen = () => {
   const router = useRouter();
-    const [userGetData, setUserGetData] = useState(null);
-
-    useEffect(() => {
-      const fetchUserData = async () => {
-          try {
-              const storedUserData = await AsyncStorage.getItem("userDetails");
-              if (storedUserData) {
-                  setUserGetData(JSON.parse(storedUserData));
-              } else {
-                  console.log("Aucune donnée reçue !");
-              }
-          } catch (error) {
-              console.error("Erreur lors de la récupération des données :", error);
-          }
-      };
-
-      fetchUserData();
-  }, []); // ✅ Exécute `useEffect` une seule fois au montage du composant
-
-  console.log(JSON.stringify(userGetData));
-
-  // État pour les champs du formulaire
-  const [shopData, setShopData] = useState({
-    name: '',
-    description: '',
-    phone: '',
-    email: '',
-    address: '',
-    bannerImage: null,
-  });
+  const [userGetData, setUserGetData] = useState(null);
+  const [loginSessionData, setLoginSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Gestion des changements dans les champs texte
+  const [shopData, setShopData] = useState({
+    email: '',
+    nom: '',
+    prenom: '',
+    telephone: '',
+    adresse: '',
+    role: '',
+    password: '',
+    confirmPassword: '',
+    longitude: '',
+    latitude: '',
+    shopNom: '',
+    shopDescription: '',
+    shopTelephone: '',
+    shopAdresse: '',
+    shopLongitude: '',
+    shopLatitude: '',
+    shopBanner: null,
+  });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const storedUserData = await AsyncStorage.getItem('userDetails');
+        if (storedUserData) {
+          const parsedData = JSON.parse(storedUserData);
+          console.log('Données récupérées de AsyncStorage :', parsedData);
+          setUserGetData(parsedData);
+          setLoginSessionData(parsedData);
+        } else {
+          console.log('Aucune donnée reçue dans AsyncStorage !');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données :', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    if (userGetData) {
+      console.log('Mise à jour de shopData avec userGetData :', userGetData);
+      setShopData((prev) => ({
+        ...prev,
+        email: userGetData.email || '',
+        nom: userGetData.name || '',
+        prenom: userGetData.prenom || '',
+        telephone: userGetData.phone || '',
+        adresse: userGetData.adress || '',
+        role: userGetData.role || '',
+        password: userGetData.password || '',
+        confirmPassword: userGetData.confirmPassword || '',
+        longitude: userGetData.userLong || '',
+        latitude: userGetData.userLat || '',
+      }));
+    }
+  }, [userGetData]);
+
   const handleChange = (field, value) => {
     setShopData((prev) => ({
       ...prev,
@@ -61,7 +90,6 @@ const ShopCreationScreen = () => {
     }));
   };
 
-  // Gestion de l'upload de l'image de bannière
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -77,96 +105,214 @@ const ShopCreationScreen = () => {
     });
 
     if (!result.canceled) {
+      console.log('Image sélectionnée :', result.assets[0].uri);
       setShopData((prev) => ({
         ...prev,
-        bannerImage: result.assets[0].uri,
+        shopBanner: result.assets[0].uri,
       }));
     }
   };
 
-  // Gestion de la création de la boutique
   const handleCreateShop = async () => {
-    const { name, description, phone, email, address, bannerImage } = shopData;
+    console.log('État actuel de shopData avant validation :', shopData);
+    const {
+      email,
+      nom,
+      prenom,
+      telephone,
+      adresse,
+      role,
+      password,
+      confirmPassword,
+      longitude,
+      latitude,
+      shopNom,
+      shopDescription,
+      shopTelephone,
+      shopAdresse,
+      shopBanner,
+    } = shopData;
 
-    // Validation de base
-    if (!name || !description || !phone || !email || !address || !bannerImage) {
+    // Validation des champs obligatoires
+    if (!shopNom || !shopDescription || !shopTelephone || !email || !shopAdresse || !shopBanner) {
+      console.log('Champs manquants :', { shopNom, shopDescription, shopTelephone, email, shopAdresse, shopBanner });
       Alert.alert('Erreur', 'Veuillez remplir tous les champs et uploader une bannière.');
       return;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
+      console.log('Email invalide :', email);
       Alert.alert('Erreur', 'Veuillez entrer un email valide.');
       return;
     }
-    if (!/^\d{10}$/.test(phone)) {
+    if (!/^\d{10}$/.test(shopTelephone)) {
+      console.log('Téléphone invalide :', shopTelephone);
       Alert.alert('Erreur', 'Veuillez entrer un numéro de téléphone valide (10 chiffres).');
       return;
     }
 
     setIsLoading(true);
+    let tempFileUri = null; // Variable pour stocker l'URI du fichier temporaire
+
     try {
-      // Simulation d'un appel API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('nom', nom);
+      formData.append('prenom', prenom);
+      formData.append('telephone', telephone);
+      formData.append('adresse', adresse);
+      formData.append('role', role);
+      formData.append('password', password);
+      formData.append('confirmPassword', confirmPassword);
+      formData.append('longitude', longitude);
+      formData.append('latitude', latitude);
+      formData.append('shopNom', shopNom);
+      formData.append('shopDescription', shopDescription);
+      formData.append('shopTelephone', shopTelephone);
+      formData.append('shopAdresse', shopAdresse);
+      formData.append('shopLongitude', shopData.shopLongitude || '');
+      formData.append('shopLatitude', shopData.shopLatitude || '');
+
+      if (shopBanner) {
+        let fileUri;
+        let filename = 'shopBanner.png'; // Nom par défaut
+        let type = 'image/png'; // Type par défaut
+
+        if (shopBanner.startsWith('data:image')) {
+          // Cas 1 : Chaîne base64 -> Conversion en fichier
+          const base64Data = shopBanner.split(',')[1]; // Extrait la partie base64
+          fileUri = `${FileSystem.documentDirectory}shopBanner.png`;
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          type = shopBanner.split(';')[0].split(':')[1]; // Ex. "image/png"
+          tempFileUri = fileUri; // Stocke pour suppression ultérieure
+          console.log('Base64 converti en fichier :', { uri: fileUri, name: filename, type });
+        } else if (shopBanner.startsWith('file://') || shopBanner.startsWith('content://')) {
+          // Cas 2 : URI de fichier (ImagePicker)
+          fileUri = shopBanner;
+          filename = fileUri.split('/').pop();
+          const match = /\.(\w+)$/.exec(filename);
+          type = match ? `image/${match[1]}` : 'image/jpeg';
+          console.log('Fichier directement utilisé :', { uri: fileUri, name: filename, type });
+        }
+
+        // Ajout du fichier au FormData
+        formData.append('shopBanner', {
+          uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
+          name: filename,
+          type,
+        });
+      }
+
+      // Log complet des données envoyées
+      console.log('Données envoyées au serveur :', {
+        email,
+        nom,
+        prenom,
+        telephone,
+        adresse,
+        role,
+        password,
+        confirmPassword,
+        longitude,
+        latitude,
+        shopNom,
+        shopDescription,
+        shopTelephone,
+        shopAdresse,
+        shopLongitude: shopData.shopLongitude,
+        shopLatitude: shopData.shopLatitude,
+        shopBanner: shopBanner ? shopBanner.substring(0, 50) + '...' : null,
+      });
+
+      const response = await fetch('http://195.35.24.128:8081/api/user/new', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('Statut de la réponse :', response.status);
+      const responseText = await response.text();
+      console.log('Réponse brute du serveur :', responseText);
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          errorData = { message: 'Réponse non-JSON ou vide' };
+        }
+        throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.log('Impossible de parser la réponse en JSON');
+        result = {};
+      }
+
+      console.log('Résultat parsé :', result);
       Alert.alert('Succès', 'Boutique créée avec succès !');
+      console.log('Tentative de redirection vers /sellers/dashboard');
       router.push('/sellers/dashboard');
     } catch (error) {
+      console.error('Erreur dans handleCreateShop :', error);
       Alert.alert('Erreur', error.message || 'Échec de la création de la boutique.');
     } finally {
       setIsLoading(false);
+      // Nettoyage du fichier temporaire si créé
+      if (tempFileUri) {
+        await FileSystem.deleteAsync(tempFileUri).catch((err) =>
+          console.log('Erreur lors de la suppression du fichier temporaire :', err)
+        );
+      }
     }
   };
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.container}>
           <Text style={styles.title}>Créer une boutique</Text>
           <Text style={styles.subtitle}>Configurez votre espace de vente</Text>
-
-          {/* Formulaire */}
           <View style={styles.form}>
-            {/* Nom de la boutique */}
             <View style={styles.inputContainer}>
               <Icon name="shopping-bag" size={20} color="#38A169" style={styles.icon} />
               <TextInput
                 style={styles.input}
-                value={shopData.name}
-                onChangeText={(text) => handleChange('name', text)}
+                value={shopData.shopNom}
+                onChangeText={(text) => handleChange('shopNom', text)}
                 placeholder="Nom de la boutique"
                 placeholderTextColor="#A0A0A0"
               />
             </View>
-
-            {/* Description */}
             <View style={styles.inputContainer}>
               <Icon name="edit-2" size={20} color="#38A169" style={styles.icon} />
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={shopData.description}
-                onChangeText={(text) => handleChange('description', text)}
+                value={shopData.shopDescription}
+                onChangeText={(text) => handleChange('shopDescription', text)}
                 placeholder="Description de la boutique"
                 placeholderTextColor="#A0A0A0"
                 multiline
                 numberOfLines={4}
               />
             </View>
-
-            {/* Numéro de téléphone */}
             <View style={styles.inputContainer}>
               <Icon name="phone" size={20} color="#38A169" style={styles.icon} />
               <TextInput
                 style={styles.input}
-                value={shopData.phone}
-                onChangeText={(text) => handleChange('phone', text)}
+                value={shopData.shopTelephone}
+                onChangeText={(text) => handleChange('shopTelephone', text)}
                 placeholder="Numéro de téléphone"
                 placeholderTextColor="#A0A0A0"
                 keyboardType="phone-pad"
               />
             </View>
-
-            {/* Email */}
             <View style={styles.inputContainer}>
               <Icon name="mail" size={20} color="#38A169" style={styles.icon} />
               <TextInput
@@ -179,35 +325,26 @@ const ShopCreationScreen = () => {
                 autoCapitalize="none"
               />
             </View>
-
-            {/* Adresse */}
             <View style={styles.inputContainer}>
               <Icon name="map-pin" size={20} color="#38A169" style={styles.icon} />
               <TextInput
                 style={styles.input}
-                value={shopData.address}
-                onChangeText={(text) => handleChange('address', text)}
+                value={shopData.shopAdresse}
+                onChangeText={(text) => handleChange('shopAdresse', text)}
                 placeholder="Adresse de la boutique"
                 placeholderTextColor="#A0A0A0"
               />
             </View>
-
-            {/* Bannière */}
             <Text style={styles.label}>Bannière de la boutique</Text>
             <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
               <Icon name="image" size={20} color="#fff" style={styles.uploadIcon} />
               <Text style={styles.uploadButtonText}>
-                {shopData.bannerImage ? 'Changer l’image' : 'Uploader une bannière'}
+                {shopData.shopBanner ? 'Changer l’image' : 'Uploader une bannière'}
               </Text>
             </TouchableOpacity>
-            {shopData.bannerImage && (
-              <Image
-                source={{ uri: shopData.bannerImage }}
-                style={styles.bannerPreview}
-                resizeMode="cover"
-              />
+            {shopData.shopBanner && (
+              <Image source={{ uri: shopData.shopBanner }} style={styles.bannerPreview} resizeMode="cover" />
             )}
-
             <TouchableOpacity
               style={[styles.createButton, isLoading && styles.createButtonDisabled]}
               onPress={handleCreateShop}
@@ -222,11 +359,11 @@ const ShopCreationScreen = () => {
           </View>
         </View>
       </ScrollView>
-      {/* <BottomNavigation /> */}
     </SafeAreaView>
   );
 };
 
+// Les styles restent inchangés
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
@@ -234,7 +371,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100, // Espace pour BottomNavigation
+    paddingBottom: 100,
   },
   container: {
     flex: 1,

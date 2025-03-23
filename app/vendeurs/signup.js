@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Feather';
 import { LocationContext } from "../../LocationContext";
+import { AuthContext } from '../../AuthContext';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SellerSignupScreen = () => {
@@ -28,6 +29,7 @@ const SellerSignupScreen = () => {
   const buttonScale = useRef(new Animated.Value(1)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
   const { location, errorMsg } = useContext(LocationContext);
+    const { login } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     name: '',

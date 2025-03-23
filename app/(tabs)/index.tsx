@@ -66,7 +66,7 @@ const WelcomeScreen = () => {
                   </TouchableOpacity>
                 </Link>
 
-                <Link href="../sellers/onboarding" asChild>
+                <Link href="../vendeurs/signup" asChild>
                   <TouchableOpacity style={styles.button}>
                     <LinearGradient
                       colors={["#ff8f00", "#ff5722"]}
