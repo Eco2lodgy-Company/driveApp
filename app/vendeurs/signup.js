@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/Feather';
 import { LocationContext } from "../../LocationContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SellerSignupScreen = () => {
   const router = useRouter();
@@ -94,22 +95,24 @@ const SellerSignupScreen = () => {
   const handleStart = async () => {
     console.log('Données à envoyer:', formData);
 
-    // Convertir l'objet en JSON encodé
-    const encodedData = encodeURIComponent(JSON.stringify(formData));
-
-    // Lancer l'animation avant la redirection
     setShowSuccess(true);
+
     Animated.timing(successAnim, {
         toValue: 1,
         duration: 500,
         useNativeDriver: true,
-    }).start(() => {
-        setTimeout(() => {
-            // Redirection avec les données encodées sous forme de chaîne dans l'URL
-            router.push(`vendeurs/shopCreationScreen?data=${encodedData}`);
+    }).start(async () => {
+        setTimeout(async () => {
+            try {
+                await AsyncStorage.setItem("userDetails", JSON.stringify(formData));
+                router.push(`vendeurs/shopCreationScreen`);
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde des données :", error);
+            }
         }, 1500);
     });
 };
+
 
   return (
     <SafeAreaView style={styles.safeContainer}>
