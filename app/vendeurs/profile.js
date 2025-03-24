@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
 import tw from 'twrnc';
+import { AuthContext } from '../../AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SellerProfileScreen = () => {
   const router = useRouter();
-
-  const [shopProfile] = useState({
-    name: 'Éco Chic',
-    description: 'Mode durable et responsable.',
-    email: 'contact@ecochic.com',
-    phone: '+33 6 12 34 56 78',
-    address: '12 Rue Verte, Paris, France',
-    bannerImage: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3',
-  });
+  const { logout } = useContext(AuthContext);
+const [imgUrl, setImageUrl] = useState(null);
+  const [shopProfile,setUserProfile] = useState([]);
 
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -37,8 +33,80 @@ const SellerProfileScreen = () => {
     }).start();
   }, []);
 
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+        console.error("Chemin invalide:", dbPath);
+        return ""; // Retourner une chaîne vide pour éviter l'erreur
+    }
+
+    const basePath = "/root/data/drive/shop/";
+    const baseUrl = "http://alphatek.fr:8080/";
+
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+};
+
+
+// Exemple d'utilisation
+const imagePath = shopProfile.bannerPath;
+
+console.log(imgUrl);
+
+
+  const fetchShopData = async (id, token) => {
+    try {
+      const response = await fetch(`http://195.35.24.128:8081/api/shop/find/${id}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      console.log("Données reçues :", data);
+        setUserProfile(data.data);
+        const imageUrl = convertPathToUrl(imagePath);
+        setImageUrl(imageUrl);
+    } catch (error) {
+      console.error("Erreur :", error.message);
+    }
+  };
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem("user");
+  
+        if (!userToken) {
+          console.error("Aucun token trouvé");
+          return;
+        }
+  
+        const parsedToken = JSON.parse(userToken); // Convertir en objet JS
+        console.log("Token trouvé :", parsedToken.token);
+        await fetchShopData(19, parsedToken.token); // Appel avec ID et token
+      } catch (error) {
+        console.error("Erreur lors de la récupération du token :", error.message);
+      }
+    };
+  
+    fetchData();
+  }, []);
+  
+  
+  
+
+ 
+
+  
+
   const handleLogout = () => {
     Alert.alert('Déconnexion', 'Vous avez été déconnecté avec succès.');
+    logout();
     router.push('/login');
   };
 
@@ -52,11 +120,11 @@ const SellerProfileScreen = () => {
               <TouchableOpacity onPress={() => router.push('/sellers/home')}>
                 <Icon name="arrow-left" size={28} color="#fff" />
               </TouchableOpacity>
-              <Text style={tw`text-3xl font-bold text-white`}>{shopProfile.name}</Text>
+              <Text style={tw`text-3xl font-bold text-white`}>{shopProfile.nom}</Text>
               <View style={tw`w-10`} />
             </View>
           </LinearGradient>
-          <Image source={{ uri: shopProfile.bannerImage }} style={tw`absolute top-40 left-6 right-6 h-40 rounded-xl border-4 border-white shadow-lg`} resizeMode="cover" />
+          <Image source={{ uri: imgUrl }} style={tw`absolute top-40 left-6 right-6 h-40 rounded-xl border-4 border-white shadow-lg`} resizeMode="cover" />
         </View>
 
         {/* Infos Boutique */}
@@ -64,8 +132,8 @@ const SellerProfileScreen = () => {
           {[
             { icon: 'info', label: shopProfile.description },
             { icon: 'mail', label: shopProfile.email },
-            { icon: 'phone', label: shopProfile.phone },
-            { icon: 'map-pin', label: shopProfile.address },
+            { icon: 'phone', label: shopProfile.telephone },
+            { icon: 'map-pin', label: shopProfile.adresse },
           ].map((item, index) => (
             <View key={index} style={tw`flex-row items-center bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-200`}>
               <Icon name={item.icon} size={24} color="#6D28D9" style={tw`mr-4`} />
