@@ -40,7 +40,7 @@ const [imgUrl, setImageUrl] = useState(null);
     }
 
     const basePath = "/root/data/drive/shop/";
-    const baseUrl = "http://alphatek.fr:8080/";
+    const baseUrl = "http://alphatek.fr:8084/";
 
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
 };
@@ -69,7 +69,7 @@ console.log(imgUrl);
       const data = await response.json();
       console.log("Données reçues :", data);
         setUserProfile(data.data);
-        const imageUrl = convertPathToUrl(imagePath);
+        const imageUrl = convertPathToUrl(shopProfile.bannerPath);
         setImageUrl(imageUrl);
     } catch (error) {
       console.error("Erreur :", error.message);

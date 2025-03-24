@@ -39,6 +39,7 @@ const SellerDashboardScreen = () => {
     { id: '2', message: 'Stock faible: T-shirt XL', time: '1h', type: 'warning' },
   ];
 
+  
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),

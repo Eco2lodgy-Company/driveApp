@@ -104,7 +104,7 @@ const SellerSignupScreen = () => {
         duration: 500,
         useNativeDriver: true,
     }).start(async () => {
-        setTimeout(async () => {
+        setTsimeout(async () => {
             try {
                 await AsyncStorage.setItem("userDetails", JSON.stringify(formData));
                 router.push(`vendeurs/shopCreationScreen`);
@@ -290,7 +290,7 @@ const SellerSignupScreen = () => {
 
                 <View style={styles.footer}>
                   <Text style={styles.footerText}>Déjà inscrit ?</Text>
-                  <TouchableOpacity onPress={() => router.push('/sellers/home')}>
+                  <TouchableOpacity onPress={() => router.push('/login')}>
                     <Text style={styles.footerLink}>Connexion</Text>
                   </TouchableOpacity>
                 </View>
