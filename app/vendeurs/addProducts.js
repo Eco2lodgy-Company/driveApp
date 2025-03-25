@@ -1,4 +1,3 @@
-// AddProductScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,6 +10,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  StyleSheet, // Ajouté pour les styles
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,9 +19,9 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import tw from 'twrnc';
+import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
 
-// Configuration (pourrait être déplacée dans un fichier séparé)
+// Configuration
 const API_BASE_URL = 'http://195.35.24.128:8081/api';
 const DEFAULT_SHOP_ID = '19';
 
@@ -73,7 +73,6 @@ const AddProductScreen = () => {
         setCategories(data);
       } catch (error) {
         console.error('Erreur lors de la récupération des catégories :', error);
-        // Catégories par défaut en cas d'erreur
         setCategories([
           { id: 1, name: 'Électronique' },
           { id: 2, name: 'Vêtements' },
@@ -157,12 +156,20 @@ const AddProductScreen = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
+  
     try {
       setIsLoading(true);
-
+  
       const formData = new FormData();
-
+  
+      // Fonction pour formater la date au format YYYY/MM/DD
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // +1 car getMonth commence à 0
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+      };
+  
       formData.append('libelle', name.trim());
       formData.append('acteurUsername', userEmail || 'bazoum@gmail.com');
       formData.append('codeQr', 'QR' + Date.now());
@@ -170,21 +177,21 @@ const AddProductScreen = () => {
       formData.append('shopId', DEFAULT_SHOP_ID);
       formData.append('categorieId', category);
       formData.append('quantite', parseInt(stock, 10));
-      formData.append('expiredAt', expirationDate.toISOString().split('T')[0]); // Format YYYY-MM-DD
+      formData.append('expiredAt', formatDate(expirationDate)); // Utilisation de la fonction de formatage
       formData.append('description', description.trim());
-
+  
       if (photo) {
         const filename = photo.uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : `image`;
-
+  
         formData.append('image', {
           uri: photo.uri,
           name: filename,
           type: type,
         });
       }
-
+  
       const response = await fetch(`${API_BASE_URL}/products/new`, {
         method: 'POST',
         headers: {
@@ -193,13 +200,13 @@ const AddProductScreen = () => {
         },
         body: formData,
       });
-
+  
       const responseData = await response.json();
-
+  
       if (!response.ok) {
         throw new Error(responseData.message || `Erreur ${response.status}`);
       }
-
+  
       Alert.alert('Succès', 'Produit ajouté avec succès', [
         { text: 'OK', onPress: () => router.push('/vendeurs/home') },
       ]);
@@ -215,36 +222,36 @@ const AddProductScreen = () => {
   };
 
   return (
-    <SafeAreaView style={tw`flex-1 bg-gray-100`}>
+    <SafeAreaView style={styles.safeContainer}>
       <LinearGradient
-        colors={['#38A169', '#2D8A5B']}
-        style={tw`rounded-b-3xl pt-10 pb-6`}
+        colors={['#fff', '#F9FAFB']}
+        style={styles.headerGradient}
       >
-        <View style={tw`flex-row justify-between items-center px-5`}>
-          <Text style={tw`text-3xl font-bold text-white`}>Ajouter un produit</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Ajouter un produit</Text>
           <TouchableOpacity
-            style={tw`bg-white/20 p-3 rounded-full`}
+            style={styles.backButton}
             onPress={() => router.push('/vendeurs/home')}
             disabled={isLoading}
           >
-            <Icon name="arrow-left" size={26} color="#fff" />
+            <Icon name="arrow-left" size={20} color="#111827" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      <ScrollView style={tw`px-4 py-6`}>
-        <View style={tw`bg-white rounded-2xl p-5 shadow-md`}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.formContainer}>
           {isLoading && (
-            <View style={tw`absolute top-0 left-0 right-0 bottom-0 bg-black/30 z-10 justify-center items-center`}>
-              <ActivityIndicator size="large" color="#38A169" />
-              <Text style={tw`mt-2 text-white font-bold`}>Envoi en cours...</Text>
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>Envoi en cours...</Text>
             </View>
           )}
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Libellé *</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Libellé *</Text>
             <TextInput
-              style={tw`mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-800`}
+              style={styles.input}
               value={name}
               onChangeText={setName}
               placeholder="Nom du produit"
@@ -252,10 +259,10 @@ const AddProductScreen = () => {
             />
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Description</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Description</Text>
             <TextInput
-              style={tw`mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 h-24 text-gray-800`}
+              style={[styles.input, styles.textArea]}
               value={description}
               onChangeText={setDescription}
               placeholder="Description du produit"
@@ -264,10 +271,10 @@ const AddProductScreen = () => {
             />
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Prix ($) *</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Prix ($) *</Text>
             <TextInput
-              style={tw`mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-800`}
+              style={styles.input}
               value={price}
               onChangeText={setPrice}
               placeholder="0.00"
@@ -276,10 +283,10 @@ const AddProductScreen = () => {
             />
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Stock *</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Stock *</Text>
             <TextInput
-              style={tw`mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-800`}
+              style={styles.input}
               value={stock}
               onChangeText={setStock}
               placeholder="0"
@@ -288,15 +295,15 @@ const AddProductScreen = () => {
             />
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Date d'expiration</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Date d'expiration</Text>
             <TouchableOpacity
-              style={tw`mt-2 flex-row justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-3`}
+              style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
               disabled={isLoading}
             >
-              <Text style={tw`text-gray-800`}>{expirationDate.toLocaleDateString()}</Text>
-              <Icon name="calendar" size={20} color="#38A169" />
+              <Text style={styles.dateText}>{expirationDate.toLocaleDateString()}</Text>
+              <Icon name="calendar" size={20} color="#4CAF50" />
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
@@ -309,13 +316,13 @@ const AddProductScreen = () => {
             )}
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Catégorie *</Text>
-            <View style={tw`mt-2 bg-gray-50 border border-gray-200 rounded-lg`}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Catégorie *</Text>
+            <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={category}
                 onValueChange={(itemValue) => setCategory(itemValue)}
-                style={tw`text-gray-800`}
+                style={styles.picker}
                 enabled={!isLoading}
               >
                 <Picker.Item label="Sélectionner une catégorie" value="" />
@@ -326,22 +333,22 @@ const AddProductScreen = () => {
             </View>
           </View>
 
-          <View style={tw`mb-5`}>
-            <Text style={tw`text-lg font-semibold text-gray-800`}>Photo</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Photo</Text>
             <TouchableOpacity
-              style={tw`mt-2 flex-row items-center bg-gray-50 border border-gray-200 rounded-lg p-3`}
+              style={styles.uploadButton}
               onPress={pickImage}
               disabled={isLoading}
             >
-              <Icon name="upload" size={20} color="#38A169" />
-              <Text style={tw`ml-2 text-green-600`}>
+              <Icon name="upload" size={20} color="#4CAF50" />
+              <Text style={styles.uploadText}>
                 {photo ? 'Changer la photo' : 'Choisir une photo'}
               </Text>
             </TouchableOpacity>
             {photo && (
               <Image
                 source={{ uri: photo.uri }}
-                style={tw`mt-3 w-full h-48 rounded-lg border border-gray-200`}
+                style={styles.previewImage}
               />
             )}
           </View>
@@ -349,20 +356,161 @@ const AddProductScreen = () => {
           <TouchableOpacity 
             onPress={handleSubmit}
             disabled={isLoading}
+            style={styles.submitButton}
           >
             <LinearGradient
-              colors={['#38A169', '#2D8A5B']}
-              style={tw`rounded-lg p-4 items-center`}
+              colors={['#4CAF50', '#388E3C']}
+              style={styles.submitGradient}
             >
-              <Text style={tw`text-lg font-bold text-white`}>
+              <Text style={styles.submitText}>
                 {isLoading ? 'Traitement...' : 'Ajouter le produit'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <BottomNavigation /> {/* Composant ajouté */}
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  headerGradient: {
+    paddingTop: 40,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  backButton: {
+    padding: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 10,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 80, // Ajusté pour BottomNavigation
+  },
+  formContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    position: 'relative',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  pickerContainer: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+    color: '#111827',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+  },
+  uploadText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#4CAF50',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 12,
+  },
+  submitButton: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  submitGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  submitText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+});
 
 export default AddProductScreen;

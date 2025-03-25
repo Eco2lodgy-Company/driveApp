@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,50 +7,48 @@ import {
   SafeAreaView,
   Image,
   Animated,
-  Alert,
+  StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import BottomNavigation from './components/BottomNavigation';
-import tw from 'twrnc';
 import { AuthContext } from '../../AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
 
 const SellerProfileScreen = () => {
   const router = useRouter();
   const { logout } = useContext(AuthContext);
-const [imgUrl, setImageUrl] = useState(null);
-  const [shopProfile,setUserProfile] = useState([]);
-
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [imgUrl, setImageUrl] = useState(null);
+  const [shopProfile, setShopProfile] = useState({});
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
-        console.error("Chemin invalide:", dbPath);
-        return ""; // Retourner une chaîne vide pour éviter l'erreur
+      console.error("Chemin invalide:", dbPath);
+      return "";
     }
-
     const basePath = "/root/data/drive/shop/";
     const baseUrl = "http://alphatek.fr:8084/";
-
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
-};
-
-
-// Exemple d'utilisation
-const imagePath = shopProfile.bannerPath;
-
-console.log(imgUrl);
-
+  };
 
   const fetchShopData = async (id, token) => {
     try {
@@ -61,109 +59,220 @@ console.log(imgUrl);
           "Content-Type": "application/json",
         },
       });
-  
+
       if (!response.ok) {
         throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       console.log("Données reçues :", data.data);
-        setUserProfile(data.data);
-        
+      setShopProfile(data.data || {});
+      const imageUrl = convertPathToUrl(data.data?.bannerPath);
+      setImageUrl(imageUrl);
     } catch (error) {
       console.error("Erreur :", error.message);
     }
   };
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const userToken = await AsyncStorage.getItem("user");
-  
+
         if (!userToken) {
           console.error("Aucun token trouvé");
           return;
         }
-  
-        const parsedToken = JSON.parse(userToken); // Convertir en objet JS
+
+        const parsedToken = JSON.parse(userToken);
         console.log("Token trouvé :", parsedToken.token);
         await fetchShopData(19, parsedToken.token);
-        const imageUrl = convertPathToUrl(shopProfile.bannerPath)    ; 
-    setImageUrl(imageUrl);
-        // Appel avec ID et token
       } catch (error) {
         console.error("Erreur lors de la récupération du token :", error.message);
       }
     };
-    
+
     fetchData();
   }, []);
-  
-  
-  
-
- 
-
-  
 
   const handleLogout = async () => {
-    console.log('Déconnexion', 'Vous avez été déconnecté avec succès.', [
-      { text: 'OK', onPress: async () => {
-          await logout();  // Attendre la fin de la déconnexion
-          router.push('/login'); // Redirection après la déconnexion
-        } 
-      }
-    ]);
+    console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
+    await logout();
+    router.push('/login');
   };
-  
-  
-  
 
   return (
-    <SafeAreaView style={tw`flex-1 bg-gray-100`}>
-      <ScrollView contentContainerStyle={tw`pb-24`}>
-        {/* En-tête */}
-        <View style={tw`relative mb-16`}>
-          <LinearGradient colors={['#6D28D9', '#4C1D95']} style={tw`h-64 rounded-b-[40px] shadow-lg`}>
-            <View style={tw`flex-row justify-between items-center px-6 pt-14`}>
-              <TouchableOpacity onPress={() => router.push('/sellers/home')}>
-                <Icon name="arrow-left" size={28} color="#fff" />
-              </TouchableOpacity>
-              <Text style={tw`text-3xl font-bold text-white`}>{shopProfile.nom}</Text>
-              <View style={tw`w-10`} />
-            </View>
-          </LinearGradient>
-          <Image source={{ uri: imgUrl }} style={tw`absolute top-40 left-6 right-6 h-40 rounded-xl border-4 border-white shadow-lg`} resizeMode="cover" />
-        </View>
+    <SafeAreaView style={styles.safeContainer}>
+      <Animated.View style={[styles.header, {
+        opacity: headerAnim,
+        transform: [{
+          translateY: headerAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-20, 0],
+          }),
+        }],
+      }]}>
+        <LinearGradient
+          colors={['#fff', '#F9FAFB']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.push('/sellers/home')}
+            >
+              <Icon name="arrow-left" size={20} color="#111827" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{shopProfile.nom || 'Profil Boutique'}</Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
-        {/* Infos Boutique */}
-        <Animated.View style={[tw`px-6`, { opacity: fadeAnim }]}>  
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Animated.View style={[styles.profileImageContainer, { opacity: fadeAnim }]}>
+          <Image
+            source={{ uri: imgUrl || 'https://via.placeholder.com/150' }}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        </Animated.View>
+
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           {[
-            { icon: 'info', label: shopProfile.description },
-            { icon: 'mail', label: shopProfile.email },
-            { icon: 'phone', label: shopProfile.telephone },
-            { icon: 'map-pin', label: shopProfile.adresse },
+            { icon: 'info', label: shopProfile.description || 'Description non disponible' },
+            { icon: 'mail', label: shopProfile.email || 'Email non disponible' },
+            { icon: 'phone', label: shopProfile.telephone || 'Téléphone non disponible' },
+            { icon: 'map-pin', label: shopProfile.adresse || 'Adresse non disponible' },
           ].map((item, index) => (
-            <View key={index} style={tw`flex-row items-center bg-white rounded-2xl p-5 mb-4 shadow-md border border-gray-200`}>
-              <Icon name={item.icon} size={24} color="#6D28D9" style={tw`mr-4`} />
-              <Text style={tw`text-gray-900 text-lg font-medium flex-1`}>{item.label}</Text>
+            <View key={index} style={styles.infoCard}>
+              <View style={styles.infoIcon}>
+                <Icon name={item.icon} size={20} color="#6B7280" />
+              </View>
+              <Text style={styles.infoText}>{item.label}</Text>
             </View>
           ))}
 
-          {/* Boutons */}
-          <View style={tw`mt-6 flex-row justify-between`}>  
-            <TouchableOpacity onPress={() => router.push('/sellers/edit-profile')} style={tw`flex-1 bg-purple-700 rounded-xl py-4 mr-2 shadow-lg`}>
-              <Text style={tw`text-white text-center text-lg font-semibold`}>Modifier</Text>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => router.push('/sellers/edit-profile')}
+            >
+              <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.actionGradient}>
+                <Icon name="edit" size={20} color="#fff" />
+                <Text style={styles.actionText}>Modifier</Text>
+              </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout} style={tw`flex-1 bg-red-600 rounded-xl py-4 ml-2 shadow-lg`}>
-              <Text style={tw`text-white text-center text-lg font-semibold`}>Déconnexion</Text>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleLogout}
+            >
+              <LinearGradient colors={['#F44336', '#D32F2F']} style={styles.actionGradient}>
+                <Icon name="log-out" size={20} color="#fff" />
+                <Text style={styles.actionText}>Déconnexion</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </Animated.View>
       </ScrollView>
-      <BottomNavigation />
+      <BottomNavigation /> {/* Composant ajouté */}
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    paddingTop: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  backButton: {
+    padding: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 10,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 80, // Ajusté pour laisser de l'espace à BottomNavigation
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  profileImage: {
+    width: '90%',
+    height: 150,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  section: {
+    flex: 1,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#6B7280',
+    flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  actionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  actionText: {
+    color: '#fff',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+});
 
 export default SellerProfileScreen;

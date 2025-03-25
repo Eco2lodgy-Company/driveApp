@@ -1,5 +1,4 @@
-// SellerOrdersScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
-  ScrollView,
+  Animated,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,14 +16,13 @@ import BottomNavigation from './components/BottomNavigation';
 
 const SellerOrdersScreen = () => {
   const router = useRouter();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('toutes');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Filtres disponibles
-  const filters = ['Toutes', 'En attente', 'Expédiées', 'Complétées'];
-  const [activeFilter, setActiveFilter] = useState('Toutes');
-
-  // Récupérer les commandes depuis l'API
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -32,7 +31,7 @@ const SellerOrdersScreen = () => {
 
         const formattedOrders = data.map(order => ({
           id: order.id || `ORD${Math.random().toString(36).substr(2, 9)}`,
-          customer: order开order.customer || 'Client inconnu',
+          customer: order.customer || 'Client inconnu',
           total: order.total || 0,
           status: order.status || 'Pending',
           date: order.date || new Date().toISOString().split('T')[0],
@@ -48,39 +47,58 @@ const SellerOrdersScreen = () => {
     };
 
     fetchOrders();
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  // Filtrer les commandes selon le statut sélectionné
-  const filteredOrders = activeFilter === 'Toutes'
-    ? orders
-    : orders.filter((order) =>
-        activeFilter === 'En attente' ? order.status === 'Pending' :
-        activeFilter === 'Expédiées' ? order.status === 'Shipped' :
-        order.status === 'Completed'
-      );
+  const filteredOrders = orders.filter(order => {
+    const matchesFilter = filter === 'toutes' ||
+      (filter === 'en attente' && order.status === 'Pending') ||
+      (filter === 'expédiées' && order.status === 'Shipped') ||
+      (filter === 'complétées' && order.status === 'Completed');
+    const matchesSearch = 
+      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   const renderOrder = ({ item }) => (
-    <TouchableOpacity
-      style={styles.orderCard}
-      onPress={() => router.push(`/sellers/ordersDetails?orderId=${item.id}`)}
-    >
-      <View style={styles.orderInfo}>
+    <View style={styles.orderCard}>
+      <View style={styles.orderIcon}>
+        <Icon name="shopping-bag" size={20} color="#6B7280" />
+      </View>
+      <TouchableOpacity
+        style={styles.orderDetails}
+        onPress={() => router.push(`/sellers/ordersDetails?orderId=${item.id}`)}
+      >
         <Text style={styles.orderId}>#{item.id}</Text>
         <Text style={styles.orderCustomer}>{item.customer}</Text>
         <Text style={styles.orderDate}>{item.date}</Text>
-        <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
-      </View>
-      <View style={styles.orderStatusContainer}>
         <Text style={[
           styles.orderStatus,
-          item.status === 'Pending' ? styles.statusPending :
-          item.status === 'Shipped' ? styles.statusShipped :
-          styles.statusCompleted
+          { 
+            color: item.status === 'Pending' ? '#F1C40F' : 
+                  item.status === 'Shipped' ? '#3498DB' : '#10B981'
+          }
         ]}>
-          {item.status === 'Pending' ? 'En attente' : item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
+          {item.status === 'Pending' ? 'En attente' : 
+           item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
         </Text>
-      </View>
-    </TouchableOpacity>
+        <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   if (loading) {
@@ -93,61 +111,81 @@ const SellerOrdersScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      {/* En-tête */}
-      <LinearGradient
-        colors={['#38A169', '#2D8A5B']}
-        style={styles.headerGradient}
-      >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Commandes</Text>
+      <Animated.View style={[styles.header, {
+        opacity: headerAnim,
+        transform: [{
+          translateY: headerAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-20, 0],
+          }),
+        }],
+      }]}>
+        <LinearGradient
+          colors={['#fff', '#F9FAFB']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Commandes</Text>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.push('/sellers/home')}
+            >
+              <Icon name="arrow-left" size={20} color="#111827" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+
+      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher (ID, client...)"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+
+        <View style={styles.filterButtons}>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.push('/sellers/home')}
+            style={[styles.filterButton, filter === 'toutes' && styles.activeFilter]}
+            onPress={() => setFilter('toutes')}
           >
-            <Icon name="arrow-left" size={26} color="#fff" />
+            <Text style={styles.filterText}>Toutes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, filter === 'en attente' && styles.activeFilter]}
+            onPress={() => setFilter('en attente')}
+          >
+            <Text style={styles.filterText}>En attente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, filter === 'expédiées' && styles.activeFilter]}
+            onPress={() => setFilter('expédiées')}
+          >
+            <Text style={styles.filterText}>Expédiées</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, filter === 'complétées' && styles.activeFilter]}
+            onPress={() => setFilter('complétées')}
+          >
+            <Text style={styles.filterText}>Complétées</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.wave} />
-      </LinearGradient>
 
-      {/* Filtres */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[
-              styles.filterButton,
-              activeFilter === filter && styles.filterButtonActive,
-            ]}
-            onPress={() => setActiveFilter(filter)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === filter && styles.filterTextActive,
-              ]}
-            >
-              {filter}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Liste des commandes */}
-      <FlatList
-        data={filteredOrders}
-        renderItem={renderOrder}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.orderList}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Aucune commande pour le moment.</Text>
-        }
-      />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {filteredOrders.length} commande(s) trouvée(s)
+          </Text>
+          <FlatList
+            data={filteredOrders}
+            renderItem={renderOrder}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>Aucune commande trouvée</Text>
+            }
+          />
+        </View>
+      </Animated.View>
 
       <BottomNavigation />
     </SafeAreaView>
@@ -157,145 +195,134 @@ const SellerOrdersScreen = () => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
-  },
-  headerGradient: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    paddingTop: 40,
-    paddingBottom: 60,
+    backgroundColor: '#F9FAFB',
   },
   header: {
+    paddingTop: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    color: '#111827',
   },
   backButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 50,
-    padding: 12,
+    padding: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 10,
   },
-  wave: {
-    position: 'absolute',
-    bottom: -20,
-    left: 0,
-    right: 0,
-    height: 40,
-    backgroundColor: '#F0F4F8',
-    borderTopLeftRadius: 50,
-    borderTopRightRadius: 50,
+  contentContainer: {
+    padding: 16,
+    flex: 1,
   },
-  filterContainer: {
-    paddingVertical: 10, // Réduit pour un conteneur plus compact
+  searchInput: {
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EDEFF2',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
   },
-  filterContent: {
-    paddingHorizontal: 20,
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
   },
   filterButton: {
-    paddingVertical: 6, // Réduit pour des boutons plus petits verticalement
-    paddingHorizontal: 16, // Légèrement réduit pour compacter
-    borderRadius: 20, // Coins arrondis plus petits
-    marginRight: 10, // Espacement entre boutons réduit
-    backgroundColor: '#F5F6F8',
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#EDEFF2',
+    borderColor: '#E5E7EB',
+    flex: 1,
+    alignItems: 'center',
   },
-  filterButtonActive: {
-    backgroundColor: '#38A169',
-    borderColor: '#38A169',
+  activeFilter: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
   },
   filterText: {
-    fontSize: 14, // Réduit pour des petits boutons
-    color: '#666',
+    color: '#111827',
     fontWeight: '600',
   },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: '700',
+  section: {
+    flex: 1,
   },
-  orderList: {
-    padding: 20,
-    paddingBottom: 100,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
   },
   orderCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 1,
   },
-  orderInfo: {
+  orderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  orderDetails: {
     flex: 1,
   },
   orderId: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
   },
   orderCustomer: {
-    fontSize: 14,
-    color: '#666',
-    marginVertical: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
   orderDate: {
     fontSize: 12,
-    color: '#999',
-  },
-  orderTotal: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#38A169',
-    marginTop: 4,
-  },
-  orderStatusContainer: {
-    alignItems: 'center',
+    color: '#9CA3AF',
+    marginTop: 2,
   },
   orderStatus: {
     fontSize: 12,
-    fontWeight: '700',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    color: '#fff',
+    fontWeight: '600',
+    marginTop: 2,
   },
-  statusPending: {
-    backgroundColor: '#F1C40F',
-  },
-  statusShipped: {
-    backgroundColor: '#3498DB',
-  },
-  statusCompleted: {
-    backgroundColor: '#38A169',
+  orderTotal: {
+    fontSize: 12,
+    color: '#10B981',
+    marginTop: 2,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
     textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
     marginTop: 20,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
     textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
     marginTop: 50,
   },
 });
