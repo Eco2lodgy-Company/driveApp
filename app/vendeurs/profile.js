@@ -23,7 +23,6 @@ const SellerProfileScreen = () => {
   const [shopProfile, setShopProfile] = useState({});
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {

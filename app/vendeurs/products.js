@@ -127,7 +127,7 @@ const SellerProductsScreen = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.editButton}
-        onPress={() => router.push(`/sellers/editProduct?productId=${item.id}`)}
+        onPress={() => router.push(`vendeurs/editProduct?productId=${item.id}`)}
       >
         <Icon name="edit-2" size={16} color="#6B7280" />
       </TouchableOpacity>
