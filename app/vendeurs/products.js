@@ -106,7 +106,7 @@ const SellerProductsScreen = () => {
       </View>
       <TouchableOpacity
         style={styles.productDetails}
-        onPress={() => router.push(`/sellers/product-details?productId=${item.id}`)}
+        onPress={() => router.push(`vendeurs/productDetails?productId=${item.id}`)}
       >
         <Image
           source={{ uri: item.image }}
