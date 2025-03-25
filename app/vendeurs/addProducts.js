@@ -73,7 +73,7 @@ const AddProductScreen = () => {
         const data = await response.json();
         setCategories(data.data);
       } catch (error) {
-        console.error('Erreur lors de la récupération des catégories :', error);
+        //console.error('Erreur lors de la récupération des catégories :', error);
         
         //Alert.alert('Avertissement', 'Impossible de charger les catégories. Utilisation des catégories par défaut.');
       } finally {
