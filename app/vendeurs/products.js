@@ -14,51 +14,84 @@ import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SellerProductsScreen = () => {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [products, setProducts] = useState([
-    {
-      id: '1',
-      name: 'T-shirt Vintage',
-      price: 29.99,
-      stock: 15,
-      image: 'https://images.unsplash.com/photo-1654508590628-21c717998f6b?q=80&w=2076&auto=format&fit=crop',
-    },
-    {
-      id: '2',
-      name: 'Mug Personnalisé',
-      price: 12.50,
-      stock: 50,
-      image: 'https://images.unsplash.com/photo-1727285100419-348edd55d403?q=80&w=2070&auto=format&fit=crop',
-    },
-    {
-      id: '3',
-      name: 'Sac Éco',
-      price: 19.99,
-      stock: 8,
-      image: 'https://plus.unsplash.com/premium_photo-1686584355100-e6906b984f3c?q=80&w=2070&auto=format&fit=crop',
-    },
-  ]);
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/shop/";
+    const baseUrl = "http://alphatek.fr:8084/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(headerAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const loadData = async () => {
+      try {
+        // Récupérer les données utilisateur depuis AsyncStorage
+        const userData = await AsyncStorage.getItem('user');
+        const user = userData ? JSON.parse(userData) : null; // Parser le JSON
+        const token = user?.token; // Accéder au token dans l'objet user
+
+        if (!token) {
+          console.error("Aucun token trouvé dans AsyncStorage");
+          setLoading(false);
+          return;
+        }
+
+        // Récupérer les produits avec le token
+        const response = await fetch('http://195.35.24.128:8081/api/products/findByShop/19?username=bazoum@gmail.com', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`, // Utiliser le token directement
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success' && Array.isArray(data.data)) {
+          const transformedProducts = data.data.map(product => ({
+            id: product.id.toString(),
+            name: product.libelle,
+            price: product.prix,
+            stock: product.quantite,
+            image: convertPathToUrl(product.imagePath),
+          }));
+          setProducts(transformedProducts);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des produits:', error);
+      } finally {
+        setLoading(false);
+      }
+
+      // Lancer les animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(headerAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
+    loadData();
   }, []);
 
   const filteredProducts = products.filter(product =>
@@ -79,10 +112,11 @@ const SellerProductsScreen = () => {
           source={{ uri: item.image }}
           style={styles.productImage}
           resizeMode="cover"
+          onError={(e) => console.log('Erreur de chargement image:', e.nativeEvent.error)}
         />
         <View style={styles.productInfo}>
           <Text style={styles.productName}>#{item.id} - {item.name}</Text>
-          <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+          <Text style={styles.productPrice}>{item.price} FCFA</Text>
           <Text style={[
             styles.productStock,
             { color: item.stock > 10 ? '#10B981' : '#F44336' }
@@ -118,8 +152,8 @@ const SellerProductsScreen = () => {
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Mes Produits</Text>
             <TouchableOpacity
-              style={styles.profileButton}
               onPress={() => router.push('/sellers/home')}
+              style={styles.profileButton}
             >
               <Icon name="arrow-left" size={20} color="#111827" />
             </TouchableOpacity>
@@ -136,18 +170,26 @@ const SellerProductsScreen = () => {
         />
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {filteredProducts.length} produit(s) trouvé(s)
-          </Text>
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProduct}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-            }
-          />
+          {loading ? (
+            <Text style={styles.loadingText}>Chargement...</Text>
+          ) : products.length === 0 ? (
+            <Text style={styles.emptyText}>Pas de produit disponible</Text>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>
+                {filteredProducts.length} produit(s) trouvé(s)
+              </Text>
+              <FlatList
+                data={filteredProducts}
+                renderItem={renderProduct}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+                }
+              />
+            </>
+          )}
         </View>
       </Animated.View>
 
@@ -280,6 +322,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
+    marginTop: 20,
+  },
+  loadingText: {
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
