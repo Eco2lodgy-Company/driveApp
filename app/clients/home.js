@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,56 +14,128 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
-
-const initialProducts = [
-  { id: '1', name: 'T-Shirt Black', price: 29.99, shop: 'Noor Boutique', category: 'Clothing', image: 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?q=80&w=1887&auto=format&fit=crop' },
-  { id: '2', name: 'Jeans Blue', price: 59.99, shop: 'Fashion Hub', category: 'Clothing', image: 'https://plus.unsplash.com/premium_photo-1667049290968-d0e2b9c36e01?q=80&w=1974&auto=format&fit=crop' },
-  { id: '3', name: 'Sneakers White', price: 89.99, shop: 'Trendy Wear', category: 'Shoes', image: 'https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?q=80&w=1974&auto=format&fit=crop' },
-  { id: '2', name: 'Jeans Blue', price: 59.99, shop: 'Fashion Hub', category: 'Clothing', image: 'https://plus.unsplash.com/premium_photo-1667049290968-d0e2b9c36e01?q=80&w=1974&auto=format&fit=crop' },
-  { id: '3', name: 'Sneakers White', price: 89.99, shop: 'Trendy Wear', category: 'Shoes', image: 'https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?q=80&w=1974&auto=format&fit=crop' },
-  { id: '4', name: 'Jacket Leather', price: 129.99, shop: 'Noor Boutique', category: 'Clothing', image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?q=80&w=1965&auto=format&fit=crop' },
-  { id: '5', name: 'Cap Gray', price: 29.99, shop: 'Street Style', category: 'Accessories', image: 'https://images.unsplash.com/photo-1606115757624-6b9bfe9fa5e4?q=80&w=500&auto=format&fit=crop' },
-  { id: '6', name: 'Hoodie Red', price: 49.99, shop: 'Fashion Hub', category: 'Clothing', image: 'https://images.unsplash.com/photo-1618453292459-53424b66bb6a?q=80&w=1964&auto=format&fit=crop' },
-  { id: '7', name: 'Necklace Gold', price: 39.99, shop: 'Trendy Wear', category: 'Jewelry', image: 'https://images.unsplash.com/photo-1606760227091-3dd44d7f7f91?q=80&w=1887&auto=format&fit=crop' },
-];
+import { AuthContext } from '../../AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import BottomNavigation from './components/BottomNavigation';
 
 const categories = ["All", "Clothing", "Shoes", "Accessories", "Jewelry", "Bags"];
 
 const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { width } = useWindowDimensions();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
-
+  const [userData, setUserData] = useState(null);
   const numColumns = Math.max(2, Math.floor(width / 180));
   const cardWidth = (width - 48) / numColumns;
+  
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "https://via.placeholder.com/150";
+    }
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
-      Animated.spring(headerAnim, {
+      Animated.timing(headerAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
-  const filteredProducts = initialProducts.filter(product => {
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await AsyncStorage.getItem('user');
+        if (user) {
+          const parsedUser = JSON.parse(user);
+          setUserData(parsedUser);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      }
+    };
+  
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!userData || !userData.token) {
+        console.error('Token utilisateur manquant');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Email utilisateur:', userData.email); 
+        console.log('Token utilisateur:', userData.token);
+
+        const apiUrl = `http://195.35.24.128:8081/api/products/liste?username=${userData.email}`;
+        const requestConfig = {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userData.token}`,
+          },
+        };
+
+        const response = await fetch(apiUrl, requestConfig);
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('Détails erreur API:', errorData);
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Données de l\'API', data.data);
+
+        const mappedProducts = data.data.map((item) => ({
+          id: item.id.toString(),
+          name: item.libelle,
+          price: item.prix,
+          shop: item.boutiqueNom,
+          category: item.categorieIntitule,
+          image: convertPathToUrl(item.imagePath),
+        }));
+        
+        setProducts(mappedProducts);
+        console.log('Nombre de produits:', mappedProducts.length);
+        
+      } catch (error) {
+        console.error('Erreur lors de la récupération des produits:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [userData]);
+
+  const filteredProducts = products?.filter((product) => {
+    if (!product) return false;
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
-    const matchesSearch = 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.shop.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.shop?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
-  });
+  }) || [];
 
   const renderProduct = ({ item }) => (
     <View style={[styles.productCard, { width: cardWidth }]}>
@@ -72,18 +144,22 @@ const HomeScreen = () => {
         onPress={() => router.push(`/clients/ProductScreen?productId=${item.id}`)}
       >
         <Image
-          source={{ uri: item.image }}
+          source={{ uri: item.image || 'https://via.placeholder.com/150' }}
           style={styles.productImage}
           resizeMode="cover"
+          onError={(e) => {
+            console.log('Erreur de chargement:', e.nativeEvent.error);
+            // Vous pouvez aussi mettre à jour l'URI vers une image de secours ici
+          }}
         />
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.productShop}>{item.shop}</Text>
           <View style={styles.productFooter}>
-            <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+            <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
             <TouchableOpacity
               style={styles.addToCartButton}
-              onPress={() => console.log(`Added ${item.name} to cart`)}
+              onPress={() => console.log(`Ajouté ${item.name} au panier`)}
             >
               <Icon name="plus" size={16} color="#fff" />
             </TouchableOpacity>
@@ -95,19 +171,23 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Animated.View style={[styles.header, {
-        opacity: headerAnim,
-        transform: [{
-          translateY: headerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-20, 0],
-          }),
-        }],
-      }]}>
-        <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient colors={['#fff', '#F9FAFB']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Drive.re</Text>
             <TouchableOpacity
@@ -129,38 +209,46 @@ const HomeScreen = () => {
         />
 
         <View style={styles.filterButtons}>
-          {categories.map(category => (
+          {categories.map((category) => (
             <TouchableOpacity
               key={category}
               style={[styles.filterButton, selectedCategory === category && styles.activeFilter]}
               onPress={() => setSelectedCategory(category)}
             >
-              <Text style={styles.filterText}>{category}</Text>
+              <Text style={selectedCategory === category ? styles.activeFilterText : styles.filterText}>
+                {category}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {filteredProducts.length} produit(s) trouvé(s)
-          </Text>
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProduct}
-            keyExtractor={item => item.id}
-            numColumns={numColumns}
-            key={numColumns}
-            columnWrapperStyle={styles.productRow}
-            contentContainerStyle={styles.listContent} // Ajout pour padding en bas
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-            }
-          />
+          {loading ? (
+            <Text style={styles.loadingText}>Chargement des produits...</Text>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>
+                {filteredProducts.length} produit(s) trouvé(s)
+              </Text>
+              <FlatList
+                data={filteredProducts}
+                renderItem={renderProduct}
+                keyExtractor={(item) => item.id}
+                numColumns={numColumns}
+                key={numColumns}
+                columnWrapperStyle={styles.productRow}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+                }
+              />
+            </>
+          )}
         </View>
       </Animated.View>
 
-      <BottomNavigation /> {/* Ajout du composant BottomNavigation */}
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -198,6 +286,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     flex: 1,
+    minHeight: 200,
   },
   searchInput: {
     backgroundColor: '#fff',
@@ -230,6 +319,10 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '600',
   },
+  activeFilterText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
   section: {
     flex: 1,
   },
@@ -240,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   listContent: {
-    paddingBottom: 80, // Espace pour BottomNavigation
+    paddingBottom: 80,
   },
   productRow: {
     justifyContent: 'space-between',
@@ -296,6 +389,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 16,
+    marginTop: 20,
+  },
+  loadingText: {
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
