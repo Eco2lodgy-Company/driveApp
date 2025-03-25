@@ -1,21 +1,22 @@
 import React, { useContext, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
+import * as eva from '@eva-design/eva';
 import {
-  View,
+  ApplicationProvider,
+  Layout,
   Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  ActivityIndicator,
-  ImageBackground,
-} from 'react-native';
+  Input,
+  Button,
+  Spinner,
+  Card,
+} from '@ui-kitten/components';
+import { EvaIconsPack } from '@ui-kitten/eva-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWindowDimensions } from 'react-native';
 import { AuthContext } from "../AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import tw from 'twrnc'; // Assurez-vous d'avoir installé twrnc : npm install twrnc
+import { ImageBackground } from 'react-native';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -75,98 +76,160 @@ const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={tw`flex-1`}
-    >
+    <ApplicationProvider {...eva} theme={eva.light} icons={EvaIconsPack}>
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }}
-        style={tw`flex-1 w-full h-full`}
+        style={styles.backgroundImage}
       >
         <LinearGradient
           colors={['rgba(255, 98, 0, 0.9)', 'rgba(255, 140, 0, 0.85)', 'rgba(255, 167, 38, 0.8)']}
-          style={tw`flex-1 items-center justify-center py-10`}
+          style={styles.gradient}
         >
           <StatusBar barStyle="light-content" />
-
+          
           {/* Header */}
-          <View style={tw`items-center mb-12 mt-16`}>
-            <Text style={tw`text-4xl md:text-5xl font-extrabold text-white uppercase tracking-wide shadow-md`}>
+          <Layout style={styles.header} level="1">
+            <Text category="h1" style={styles.headerTitle}>
               drive.re
             </Text>
-            <Text style={tw`text-sm md:text-base text-white opacity-80 italic mt-2`}>
+            <Text category="p2" appearance="hint" style={styles.headerSubtitle}>
               Shopping nouvelle génération
             </Text>
-          </View>
+          </Layout>
 
           {/* Form Container */}
-          <View style={tw`bg-white/95 rounded-3xl p-6 w-11/12 max-w-md shadow-xl border border-gray-100`}>
+          <Card style={styles.formContainer}>
             {error ? (
-              <Text style={tw`text-red-600 text-center mb-4 text-sm font-medium`}>
+              <Text category="p1" status="danger" style={styles.message}>
                 {error}
               </Text>
             ) : null}
             {success ? (
-              <Text style={tw`text-green-500 text-center mb-4 text-sm font-bold`}>
+              <Text category="p1" status="success" style={styles.message}>
                 {success}
               </Text>
             ) : null}
 
             {/* Inputs */}
-            <TextInput
-              style={tw`bg-gray-50 rounded-xl p-4 mb-4 text-base text-gray-800 border border-gray-200 shadow-sm`}
+            <Input
+              style={styles.input}
               placeholder="Adresse email"
-              placeholderTextColor="#888"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <TextInput
-              style={tw`bg-gray-50 rounded-xl p-4 mb-4 text-base text-gray-800 border border-gray-200 shadow-sm`}
+            <Input
+              style={styles.input}
               placeholder="Mot de passe"
-              placeholderTextColor="#888"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
 
             {/* Forgot Password */}
-            <TouchableOpacity style={tw`self-end mb-6`}>
-              <Text style={tw`text-orange-500 text-sm font-medium underline`}>
-                Mot de passe oublié ?
-              </Text>
-            </TouchableOpacity>
+            <Button
+              appearance="ghost"
+              status="primary"
+              style={styles.forgotButton}
+              onPress={() => {} /* Ajoute ici la logique pour mot de passe oublié */}
+            >
+              Mot de passe oublié ?
+            </Button>
 
             {/* Login Button */}
-            <TouchableOpacity
-              style={tw`bg-orange-500 rounded-xl py-4 items-center shadow-lg`}
+            <Button
+              style={styles.loginButton}
               onPress={handleLogin}
               disabled={isLoading}
+              accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={tw`text-white text-lg font-bold tracking-wide`}>
-                  Connexion
-                </Text>
-              )}
-            </TouchableOpacity>
+              {!isLoading && 'Connexion'}
+            </Button>
 
             {/* Signup Link */}
-            <TouchableOpacity style={tw`mt-6 items-center`}>
-              <Text style={tw`text-gray-600 text-sm`}>
+            <Layout style={styles.signupContainer}>
+              <Text category="p2" appearance="hint">
                 Nouveau client ?{' '}
-                <Text style={tw`text-orange-500 font-semibold underline`}>
+                <Text
+                  category="p2"
+                  status="primary"
+                  onPress={() => {} /* Ajoute ici la navigation vers l'inscription */}
+                >
                   Créer un compte
                 </Text>
               </Text>
-            </TouchableOpacity>
-          </View>
+            </Layout>
+          </Card>
         </LinearGradient>
       </ImageBackground>
-    </KeyboardAvoidingView>
+    </ApplicationProvider>
   );
 };
+
+const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  gradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+    marginTop: 64,
+    backgroundColor: 'transparent',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    color: '#fff',
+    opacity: 0.8,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  formContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#EDEFF2',
+  },
+  message: {
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  input: {
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  forgotButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+  },
+  loginButton: {
+    backgroundColor: '#FF6200',
+    borderColor: '#FF6200',
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  signupContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    backgroundColor: 'transparent',
+  },
+});
 
 export default LoginScreen;

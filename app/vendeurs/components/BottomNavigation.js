@@ -18,7 +18,7 @@ const SellerBottomNavigation = () => {
 
   const tabs = [
     { id: 'dashboard', label: 'Tableau', icon: 'home', route: 'vendeurs/home' },
-    { id: 'orders', label: 'Commandes', icon: 'package', route: '/sellers/orders' },
+    { id: 'orders', label: 'Commandes', icon: 'package', route: 'vendeurs/orders' },
     { id: 'products', label: 'Produits', icon: 'shopping-bag', route: 'vendeurs/products' },
     { id: 'profile', label: 'Profil', icon: 'user', route: 'vendeurs/profile' },
   ];

@@ -67,10 +67,9 @@ console.log(imgUrl);
       }
   
       const data = await response.json();
-      console.log("Données reçues :", data);
+      console.log("Données reçues :", data.data);
         setUserProfile(data.data);
-        const imageUrl = convertPathToUrl(shopProfile.bannerPath);
-        setImageUrl(imageUrl);
+        
     } catch (error) {
       console.error("Erreur :", error.message);
     }
@@ -88,12 +87,15 @@ console.log(imgUrl);
   
         const parsedToken = JSON.parse(userToken); // Convertir en objet JS
         console.log("Token trouvé :", parsedToken.token);
-        await fetchShopData(19, parsedToken.token); // Appel avec ID et token
+        await fetchShopData(19, parsedToken.token);
+        const imageUrl = convertPathToUrl(shopProfile.bannerPath)    ; 
+    setImageUrl(imageUrl);
+        // Appel avec ID et token
       } catch (error) {
         console.error("Erreur lors de la récupération du token :", error.message);
       }
     };
-  
+    
     fetchData();
   }, []);
   
@@ -104,11 +106,18 @@ console.log(imgUrl);
 
   
 
-  const handleLogout = () => {
-    Alert.alert('Déconnexion', 'Vous avez été déconnecté avec succès.');
-    logout();
-    router.push('/login');
+  const handleLogout = async () => {
+    console.log('Déconnexion', 'Vous avez été déconnecté avec succès.', [
+      { text: 'OK', onPress: async () => {
+          await logout();  // Attendre la fin de la déconnexion
+          router.push('/login'); // Redirection après la déconnexion
+        } 
+      }
+    ]);
   };
+  
+  
+  
 
   return (
     <SafeAreaView style={tw`flex-1 bg-gray-100`}>
