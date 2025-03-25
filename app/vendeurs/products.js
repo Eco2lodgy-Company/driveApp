@@ -29,8 +29,8 @@ const SellerProductsScreen = () => {
       console.error("Chemin invalide:", dbPath);
       return "";
     }
-    const basePath = "/root/data/drive/shop/";
-    const baseUrl = "http://alphatek.fr:8084/";
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
 
