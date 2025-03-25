@@ -1,5 +1,5 @@
 // SellerBottomNavigation.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,14 +23,11 @@ const SellerBottomNavigation = () => {
     { id: 'profile', label: 'Profil', icon: 'user', route: 'vendeurs/profile' },
   ];
 
-  useEffect(() => {
-    const currentTab = tabs.find((tab) => pathname === tab.route)?.id || 'dashboard';
-    setActiveTab(currentTab);
-  }, [pathname]);
-
   const handlePress = (tabId, route) => {
+    // Mettre à jour l'état immédiatement
     setActiveTab(tabId);
 
+    // Animation pour tous les onglets (réinitialisation)
     Object.values(animations).forEach((anim) => {
       Animated.timing(anim, {
         toValue: 1,
@@ -39,6 +36,7 @@ const SellerBottomNavigation = () => {
       }).start();
     });
 
+    // Animation de l'onglet cliqué
     Animated.spring(animations[tabId], {
       toValue: 1.1,
       friction: 8,
@@ -52,8 +50,17 @@ const SellerBottomNavigation = () => {
       }).start();
     });
 
-    router.push(route);
+    // Navigation vers la route
+    if (pathname !== route) {
+      router.push(route);
+    }
   };
+
+  // Synchronisation initiale avec le pathname (optionnel)
+  React.useEffect(() => {
+    const currentTab = tabs.find((tab) => pathname === tab.route)?.id || 'dashboard';
+    setActiveTab(currentTab);
+  }, [pathname]);
 
   return (
     <View style={styles.container}>
@@ -77,7 +84,7 @@ const SellerBottomNavigation = () => {
                 styles.iconContainer,
                 {
                   transform: [{ scale: animations[tab.id] }],
-                  backgroundColor: activeTab === tab.id ? '#38A169' : '#E5E7EB',
+                  backgroundColor: activeTab === tab.id ? '#38A169' : '#E5E7EB', // Fond vert pour actif
                   shadowOpacity: activeTab === tab.id ? 0.25 : 0,
                   shadowOffset: { width: 0, height: activeTab === tab.id ? -2 : 0 },
                   shadowRadius: 4,
@@ -88,7 +95,7 @@ const SellerBottomNavigation = () => {
               <Icon
                 name={tab.icon}
                 size={20}
-                color={activeTab === tab.id ? '#fff' : '#6B7280'}
+                color={activeTab === tab.id ? '#FFFFFF' : '#6B7280'} // Icône blanche sur fond vert
               />
             </Animated.View>
             <Text
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
     right: 0,
   },
   wave: {
-    height: 15, // Réduit pour un effet plus subtil
+    height: 15,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
   },
@@ -122,10 +129,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 8, // Réduit
-    paddingBottom: 15, // Réduit
-    borderTopLeftRadius: 20, // Réduit
-    borderTopRightRadius: 20, // Réduit
+    paddingVertical: 8,
+    paddingBottom: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.15,
@@ -135,22 +142,22 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4, // Réduit
+    paddingVertical: 4,
     flex: 1,
   },
   iconContainer: {
-    width: 36, // Réduit de 48 à 36
-    height: 36, // Réduit de 48 à 36
-    borderRadius: 18, // Réduit proportionnellement
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4, // Réduit de 6 à 4
+    marginBottom: 4,
     shadowColor: '#000',
   },
   tabLabel: {
-    fontSize: 11, // Réduit de 13 à 11
-    fontWeight: '600', // Légèrement moins audacieux
-    letterSpacing: 0.1, // Réduit
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
 });
 
