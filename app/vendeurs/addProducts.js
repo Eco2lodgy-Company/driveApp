@@ -40,7 +40,7 @@ const AddProductScreen = () => {
   const [token, setToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-
+  const [UserLocalData, setUserLocalData] = useState('');
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -48,8 +48,9 @@ const AddProductScreen = () => {
         if (user) {
           const parsedUser = JSON.parse(user);
           setToken(parsedUser.token);
+          //Alert.alert('Utilisateur', `Bienvenue ${userEmail}`);
           setUserEmail(parsedUser.email || '');
-        }
+        } 
       } catch (error) {
         console.error('Erreur lors de la récupération des données utilisateur :', error);
         Alert.alert('Erreur', 'Impossible de charger les données utilisateur');
@@ -59,7 +60,7 @@ const AddProductScreen = () => {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/categories`, {
+        const response = await fetch(`http://195.35.24.128:8081/api/productCategories/liste?username=${userEmail}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -70,15 +71,11 @@ const AddProductScreen = () => {
         }
 
         const data = await response.json();
-        setCategories(data);
+        setCategories(data.data);
       } catch (error) {
         console.error('Erreur lors de la récupération des catégories :', error);
-        setCategories([
-          { id: 1, name: 'Électronique' },
-          { id: 2, name: 'Vêtements' },
-          { id: 3, name: 'Alimentation' },
-        ]);
-        Alert.alert('Avertissement', 'Impossible de charger les catégories. Utilisation des catégories par défaut.');
+        
+        //Alert.alert('Avertissement', 'Impossible de charger les catégories. Utilisation des catégories par défaut.');
       } finally {
         setIsLoading(false);
       }
@@ -327,7 +324,7 @@ const AddProductScreen = () => {
               >
                 <Picker.Item label="Sélectionner une catégorie" value="" />
                 {categories.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                  <Picker.Item key={cat.id} label={cat.intitule} value={cat.id} />
                 ))}
               </Picker>
             </View>
