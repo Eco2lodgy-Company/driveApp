@@ -169,7 +169,7 @@ const ProductDetailScreen = () => {
 
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => router.push({ pathname: '/vendeurs/edit-product', params: { productId } })}
+            onPress={() => router.push({ pathname: 'vendeurs/editProduct', params: { productId } })}
           >
             <LinearGradient
               colors={['#4CAF50', '#388E3C']}
