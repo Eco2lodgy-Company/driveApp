@@ -25,6 +25,7 @@ const ProductScreen = () => {
   const router = useRouter();
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
+  const [userId, setUserId] = useState(null);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -90,6 +91,8 @@ const ProductScreen = () => {
         const parsedToken = JSON.parse(userToken);
         setToken(parsedToken.token);
         setUserEmail(parsedToken.email);
+        setUserId(parsedToken.id);
+
       } catch (error) {
         console.error("Erreur lors de la récupération du token :", error.message);
       }
@@ -97,11 +100,43 @@ const ProductScreen = () => {
     fetchToken();
   }, []);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (product) {
-      console.log(`Added ${product.libelle} to cart`);
+        try {
+            const url = 'http://195.35.24.128:8081/api/paniers/client/new';
+            
+            
+            const data = {
+                produits: [{
+                    idProduit: product.id, // On suppose que product a un champ id
+                    quantite: 1,
+                    dateAjout: new Date().toISOString()
+                }],
+                clientId: userId
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/hal+json',
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log(`Added ${product.libelle} to cart`, result);
+            
+        } catch (error) {
+            console.error(`Erreur lors de l'ajout de ${product.libelle} au panier:`, error);
+        }
     }
-  };
+};
 
   const handleBackPress = () => {
     console.log("Back button pressed - Clic détecté !");
