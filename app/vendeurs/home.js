@@ -61,7 +61,7 @@ const SellerDashboardScreen = () => {
       </View>
       <TouchableOpacity
         style={styles.orderDetails}
-        onPress={() => router.push(`/sellers/ordersDetails?orderId=${item.id}`)}
+        onPress={() => router.push(`vendeurs/orderDetails?orderId=${item.id}`)}
       >
         <Text style={styles.orderId}>#{item.id}</Text>
         <Text style={styles.orderCustomer}>{item.customer}</Text>
@@ -121,7 +121,7 @@ const SellerDashboardScreen = () => {
               <Icon name="user" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.headerSubtitle}>{user.nom}  {user.prenom}</Text>
+          <Text style={styles.headerSubtitle}>{user.nom || ''}  {user.prenom || ''}</Text>
         </LinearGradient>
       </Animated.View>
 
