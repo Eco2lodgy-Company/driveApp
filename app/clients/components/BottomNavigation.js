@@ -1,4 +1,3 @@
-// BottomNavigation.js
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -8,7 +7,9 @@ const BottomNavigation = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Définir navItems avant de l'utiliser
+  // Nombre d'articles dans le panier (simulé, peut venir d'un contexte global)
+  const [cartCount, setCartCount] = useState(1); // Exemple : 3 articles dans le panier
+
   const navItems = [
     { icon: 'home', text: 'Home', path: '/clients/home' },
     { icon: 'search', text: 'Search', path: '/clients/shops' },
@@ -16,12 +17,11 @@ const BottomNavigation = () => {
     { icon: 'user', text: 'Profile', path: '/clients/profile' },
   ];
 
-  // Maintenant qu navItems est défini, on peut l'utiliser dans useState
   const [animations] = useState(navItems.map(() => new Animated.Value(1)));
 
   const handlePressIn = (index) => {
     Animated.spring(animations[index], {
-      toValue: 0.95,
+      toValue: 0.9,
       useNativeDriver: true,
     }).start();
   };
@@ -37,6 +37,7 @@ const BottomNavigation = () => {
     <View style={styles.bottomNav}>
       {navItems.map((item, index) => {
         const isActive = pathname === item.path;
+
         return (
           <Animated.View
             key={item.text}
@@ -49,11 +50,21 @@ const BottomNavigation = () => {
               onPressOut={() => handlePressOut(index)}
               activeOpacity={1}
             >
-              <Icon 
-                name={item.icon} 
-                size={24} 
-                color={isActive ? '#fff' : '#38A169'} 
-              />
+              <View style={styles.iconContainer}>
+                <Icon 
+                  name={item.icon} 
+                  size={24} 
+                  color={isActive ? '#fff' : '#38A169'} 
+                />
+
+                {/* Affichage du badge pour le panier si cartCount > 0 */}
+                {item.icon === 'shopping-cart' && cartCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{cartCount}</Text>
+                  </View>
+                )}
+              </View>
+
               <Text 
                 style={[
                   styles.navText, 
@@ -62,6 +73,7 @@ const BottomNavigation = () => {
               >
                 {item.text}
               </Text>
+
               {isActive && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
           </Animated.View>
@@ -127,6 +139,31 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: '#fff',
     borderRadius: 3,
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -10,
+    backgroundColor: '#FFA500', // Couleur orange
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FFA500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 
