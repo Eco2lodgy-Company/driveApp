@@ -123,7 +123,7 @@ const SellerProfileScreen = () => {
           <View style={styles.headerContent}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.push('/sellers/home')}
+              onPress={() => router.push('vendeurs/home')}
             >
               <Icon name="arrow-left" size={20} color="#111827" />
             </TouchableOpacity>

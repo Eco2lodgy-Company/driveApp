@@ -121,7 +121,7 @@ const SellerDashboardScreen = () => {
               <Icon name="user" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.headerSubtitle}>{user.nom || ''}  {user.prenom || ''}</Text>
+          <Text style={styles.headerSubtitle}>{user.nom || 'vide'}  {user.prenom || 'vide'}</Text>
         </LinearGradient>
       </Animated.View>
 
