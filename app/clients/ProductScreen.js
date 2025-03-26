@@ -103,6 +103,15 @@ const ProductScreen = () => {
     }
   };
 
+  const handleBackPress = () => {
+    console.log("Back button pressed - Clic détecté !");
+    router.back();
+    if (!router.canGoBack()) {
+      console.log("Pas d'historique, redirection vers l'accueil");
+      router.push('/');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -124,7 +133,7 @@ const ProductScreen = () => {
           <Text style={styles.errorText}>
             {error || "Oups, ce produit semble introuvable pour l’instant."}
           </Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backErrorButton}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backErrorButton}>
             <Text style={styles.backErrorText}>Revenir en arrière</Text>
           </TouchableOpacity>
         </SafeAreaView>
@@ -136,7 +145,7 @@ const ProductScreen = () => {
     <View style={styles.container}>
       <StatusBar hidden={true} />
       
-      {/* Image at the top, outside SafeAreaView to go edge-to-edge */}
+      {/* Image at the top */}
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: imgUrl || 'https://via.placeholder.com/400' }}
@@ -149,15 +158,22 @@ const ProductScreen = () => {
         />
       </View>
 
+      {/* Bouton de retour déplacé ici pour tester */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={handleBackPress}
+        activeOpacity={0.7}
+      >
+        <Icon name="arrow-left" size={24} color="#fff" />
+      </TouchableOpacity>
+
       {/* Wrap the rest of the content in SafeAreaView */}
       <SafeAreaView style={styles.scrollContainer}>
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Empty Viewme to ensure the details container starts right after the image */}
           <View style={{ height: height * 0.5 }} />
-
           <Animated.View style={[styles.detailsContainer, { opacity: fadeAnim }]}>
             <View style={styles.headerRow}>
               <Text style={[styles.productName, { fontSize: width > 600 ? 30 : 26 }]}>
@@ -259,7 +275,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   imageContainer: {
-    position: 'absolute', // Position the image absolutely to stretch to the top
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -282,6 +298,15 @@ const styles = StyleSheet.create({
     height: '50%',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40, // Déplacé un peu plus bas pour être visible
+    left: 20,
+    backgroundColor: 'green', // Couleur temporaire pour le voir clairement
+    borderRadius: 20,
+    padding: 12,
+    zIndex: 100, // Très élevé pour être sûr qu'il est au-dessus de tout
   },
   detailsContainer: {
     padding: 20,
