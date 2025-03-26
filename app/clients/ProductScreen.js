@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from 'react-native-vector-icons/Feather';
@@ -131,6 +132,7 @@ const ProductScreen = () => {
 
             const result = await response.json();
             console.log(`Added ${product.libelle} to cart`, result);
+            Alert.alert('Succès', `${product.libelle} a été ajouté au panier.`);
             
         } catch (error) {
             console.error(`Erreur lors de l'ajout de ${product.libelle} au panier:`, error);
@@ -250,7 +252,7 @@ const ProductScreen = () => {
                 style={styles.buttonGradient}
               >
                 <Icon name="shopping-cart" size={24} color="#fff" style={styles.buttonIcon} />
-                <Text style={styles.addToCartText}>Add to Cart</Text>
+                <Text style={styles.addToCartText}>Ajouter au Panier</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
