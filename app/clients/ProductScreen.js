@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import {
   View,
   Text,
@@ -9,72 +9,171 @@ import {
   SafeAreaView,
   Animated,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from 'react-native-vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AuthContext } from '../../AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import BottomNavigation from './components/BottomNavigation'; // Import ajouté
 
 const ProductScreen = () => {
   const { productId } = useLocalSearchParams();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
   const router = useRouter();
+  const [token, setToken] = useState(null);
+  const [userEmail, setUserEmail] = useState(null);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [imgUrl, setImageUrl] = useState('');
 
-  const products = [
-    { id: '1', name: 'T-Shirt Black', price: 29.99, shop: 'Noor Boutique', image: 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?q=80&w=1887&auto=format&fit=crop' },
-    { id: '2', name: 'Jeans Blue', price: 59.99, shop: 'Fashion Hub', image: 'https://plus.unsplash.com/premium_photo-1667049290968-d0e2b9c36e01?q=80&w=1974&auto=format&fit=crop' },
-    { id: '3', name: 'Sneakers White', price: 89.99, shop: 'Trendy Wear', image: 'https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?q=80&w=1974&auto=format&fit=crop' },
-    { id: '4', name: 'Jacket Leather', price: 129.99, shop: 'Noor Boutique', image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?q=80&w=1965&auto=format&fit=crop' },
-    { id: '5', name: 'Cap Gray', price: 19.99, shop: 'Street Style', image: 'https://images.unsplash.com/photo-1606115757624-6b9bfe9fa5e4?q=80&w=500&auto=format&fit=crop' },
-    { id: '6', name: 'Hoodie Red', price: 49.99, shop: 'Fashion Hub', image: 'https://images.unsplash.com/photo-1618453292459-53424b66bb6a?q=80&w=1964&auto=format&fit=crop' },
-  ];
 
-  const product = products.find(item => item.id === productId) || products[0];
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+  
+        if (!token) {
+          throw new Error("Token non disponible");
+        }
+  
+        const API_URL = `http://195.35.24.128:8081/api/products/findByID/${productId}?username=${userEmail}`;
+  
+        const response = await fetch(API_URL, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`, // Utilisation du token
+          },
+        });
+  
+        if (!response.ok) {
+          throw new Error("Impossible de récupérer les détails du produit pour le moment.");
+        }
+  
+        const data = await response.json();
+        setProduct(data.data);
+        setImageUrl(convertPathToUrl(data.data.imagePath));
+        console.log(imgUrl);
+
+        
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    if (productId && token) {
+      fetchProduct();
+    }
+  
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
+      duration: 800,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [productId, token, fadeAnim]); // Ajout du token dans les dépendances
+  // Récupération du token au montage du composant
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem("user");
+  
+        if (!userToken) {
+          console.error("Aucun token trouvé");
+          return;
+        }
+  
+        const parsedToken = JSON.parse(userToken);
+        console.log("Token trouvé :", parsedToken.token);
+        setToken(parsedToken.token); // Stocke le token dans le state
+        console.log("Email utilisateur :", parsedToken.email);
+        setUserEmail(parsedToken.email);
+      } catch (error) {
+        console.error("Erreur lors de la récupération du token :", error.message);
+      }
+    };
+  
+    fetchToken();
+  }, []);
 
   const handleAddToCart = () => {
-    console.log(`Added ${product.name} to cart`);
+    if (product) {
+      console.log(`Added ${product.libelle} to cart`);
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Icon name="info" size={40} color="#6B7280" /> {/* Icône moins agressive */}
+          <Text style={styles.errorText}>
+            {error || "Oups, ce produit semble introuvable pour l’instant."}
+          </Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backErrorButton}>
+            <Text style={styles.backErrorText}>Revenir en arrière</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: height * 0.15 }]}>
-        {/* Image produit avec ombre */}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}>
+        {/* Image produit */}
         <View style={styles.imageContainer}>
           <Image 
-            source={{ uri: product.image }} 
-            style={[styles.productImage, { height: height * 0.45 }]} 
+            source={{ uri: imgUrl || 'https://via.placeholder.com/400' }}
+            style={[styles.productImage, { height: height * 0.5 }]} 
             resizeMode="cover"
           />
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Icon name="arrow-left" size={24} color="#fff" />
-          </TouchableOpacity>
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.4)', 'transparent']}
+            style={styles.imageOverlay}
+          />
         </View>
 
         {/* Détails */}
-        <Animated.View style={[styles.detailsContainer, { opacity: fadeAnim, padding: width * 0.04 }]}>
+        <Animated.View style={[styles.detailsContainer, { opacity: fadeAnim }]}>
           <View style={styles.headerRow}>
-            <Text style={[styles.productName, { fontSize: width > 600 ? 28 : 24 }]}>
-              {product.name}
+            <Text style={[styles.productName, { fontSize: width > 600 ? 30 : 26 }]}>
+              {product.libelle}
             </Text>
             <TouchableOpacity style={styles.favoriteButton}>
-              <Icon name="heart" size={width > 600 ? 24 : 20} color="#e74c3c" />
+              <Icon name="heart" size={width > 600 ? 26 : 22} color="#e74c3c" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.shopRatingContainer}>
             <Text style={[styles.productShop, { fontSize: width > 600 ? 16 : 14 }]}>
-              {product.shop}
+              {product.boutiqueNom || 'Boutique inconnue'}
             </Text>
             <View style={styles.ratingBadge}>
               <Icon name="star" size={width > 600 ? 16 : 14} color="#f1c40f" />
@@ -82,53 +181,36 @@ const ProductScreen = () => {
             </View>
           </View>
           
-          <Text style={[styles.productPrice, { fontSize: width > 600 ? 26 : 22 }]}>
-            ${product.price.toFixed(2)}
+          <Text style={[styles.productPrice, { fontSize: width > 600 ? 28 : 24 }]}>
+            ${product.prix.toFixed(2)}
           </Text>
 
           <View style={styles.descriptionCard}>
             <Text style={styles.descriptionTitle}>Description</Text>
             <Text style={[styles.productDescription, { fontSize: width > 600 ? 16 : 14 }]}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-              Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+              {product.description || 'Aucune description disponible.'}
             </Text>
           </View>
 
           {/* Bouton Add to Cart */}
           <TouchableOpacity 
             style={styles.addToCartButton}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
             onPress={handleAddToCart}
           >
             <LinearGradient
-              colors={['#2ecc71', '#27ae60']}
+              colors={['#4CAF50', '#388E3C']}
               style={styles.buttonGradient}
             >
-              <Icon name="shopping-cart" size={22} color="#fff" style={styles.buttonIcon} />
+              <Icon name="shopping-cart" size={24} color="#fff" style={styles.buttonIcon} />
               <Text style={styles.addToCartText}>Add to Cart</Text>
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        {[
-          { icon: 'home', label: 'Home', route: '/clients/home' },
-          { icon: 'search', label: 'Search', route: '/clients/shops' },
-          { icon: 'shopping-cart', label: 'Cart', route: '/clients/cart' },
-          { icon: 'user', label: 'Profile', route: '/clients/profile' },
-        ].map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={styles.navItem}
-            onPress={() => router.push(item.route)}
-          >
-            <Icon name={item.icon} size={24} color="#2ecc71" />
-            <Text style={styles.navText}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Composant BottomNavigation ajouté */}
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -136,140 +218,160 @@ const ProductScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F9FAFB',
   },
-  // Scroll Content
-  scrollContent: {},
+  scrollContent: {
+    flexGrow: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#111827',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16, // Taille réduite pour un ton plus doux
+    color: '#6B7280', // Gris au lieu de rouge
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  backErrorButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+  },
+  backErrorText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   imageContainer: {
     position: 'relative',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   productImage: {
     width: '100%',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backButton: {
+  imageOverlay: {
     position: 'absolute',
-    top: 15,
-    left: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    padding: 8,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  // Details
   detailsContainer: {
-    paddingTop: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: -15,
+    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
     backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   productName: {
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '800',
+    color: '#111827',
   },
   favoriteButton: {
-    padding: 5,
+    padding: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
   },
   shopRatingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
   },
   productShop: {
-    color: '#666',
+    color: '#6B7280',
     marginRight: 12,
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-    elevation: 1,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   ratingText: {
     marginLeft: 6,
-    color: '#333',
+    color: '#111827',
     fontWeight: '600',
-    fontSize: 14,
   },
   productPrice: {
-    fontWeight: 'bold',
-    color: '#2ecc71',
+    fontWeight: '700',
+    color: '#4CAF50',
     marginBottom: 20,
   },
   descriptionCard: {
-    backgroundColor: '#f9f9f9',
-    padding: 15,
+    backgroundColor: '#fff',
+    padding: 16,
     borderRadius: 12,
-    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 24,
   },
   descriptionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
+    color: '#111827',
+    marginBottom: 8,
   },
   productDescription: {
-    color: '#666',
-    lineHeight: 22,
+    color: '#6B7280',
+    lineHeight: 24,
   },
-  // Add to Cart Button
   addToCartButton: {
-    borderRadius: 30,
+    borderRadius: 12,
     overflow: 'hidden',
-    elevation: 3,
+    elevation: 4,
   },
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
   },
   buttonIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   addToCartText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-  },
-  // Bottom Navigation
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    elevation: 5,
-  },
-  navItem: {
-    alignItems: 'center',
-    padding: 5,
-  },
-  navText: {
-    fontSize: 12,
-    color: '#2ecc71',
-    marginTop: 4,
   },
 });
 
