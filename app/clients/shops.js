@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Animated,
   useWindowDimensions,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -18,14 +19,25 @@ const ShopsScreen = () => {
   const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const shops = [
-    { id: '1', name: 'Noor Boutique', address: '123 Fashion St, Paris', rating: 4.8, image: 'https://images.unsplash.com/photo-1555529669-2263d137507b?q=80&w=1965&auto=format&fit=crop' },
-    { id: '2', name: 'Fashion Hub', address: '456 Style Ave, London', rating: 4.5, image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1974&auto=format&fit=crop' },
-    { id: '3', name: 'Trendy Wear', address: '789 Chic Rd, New York', rating: 4.9, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1974&auto=format&fit=crop' },
-    { id: '4', name: 'Street Style', address: '321 Urban Ln, Tokyo', rating: 4.3, image: 'https://images.unsplash.com/photo-1591219067796-2573f8e8fb01?q=80&w=1974&auto=format&fit=crop' },
-    { id: '5', name: 'Elegance Shop', address: '654 Grace Blvd, Milan', rating: 4.7, image: 'https://images.unsplash.com/photo-1551489186-cf8726f514f8?q=80&w=1974&auto=format&fit=crop' },
-    { id: '6', name: 'Vintage Vibe', address: '987 Retro St, Berlin', rating: 4.6, image: 'https://images.unsplash.com/photo-1591209623510-3475ab3b69ef?q=80&w=1974&auto=format&fit=crop' },
+    { id: '1', name: 'Noor Boutique', address: '123 Fashion St, Paris', rating: 4.8, category: 'Luxe', image: 'https://images.unsplash.com/photo-1555529669-2263d137507b?q=80&w=1965&auto=format&fit=crop' },
+    { id: '2', name: 'Fashion Hub', address: '456 Style Ave, London', rating: 4.5, category: 'Casual', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1974&auto=format&fit=crop' },
+    { id: '3', name: 'Trendy Wear', address: '789 Chic Rd, New York', rating: 4.9, category: 'Luxe', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1974&auto=format&fit=crop' },
+    { id: '4', name: 'Street Style', address: '321 Urban Ln, Tokyo', rating: 4.3, category: 'Streetwear', image: 'https://images.unsplash.com/photo-1591219067796-2573f8e8fb01?q=80&w=1974&auto=format&fit=crop' },
+    { id: '5', name: 'Elegance Shop', address: '654 Grace Blvd, Milan', rating: 4.7, category: 'Luxe', image: 'https://images.unsplash.com/photo-1551489186-cf8726f514f8?q=80&w=1974&auto=format&fit=crop' },
+    { id: '6', name: 'Vintage Vibe', address: '987 Retro St, Berlin', rating: 4.6, category: 'Vintage', image: 'https://images.unsplash.com/photo-1591209623510-3475ab3b69ef?q=80&w=1974&auto=format&fit=crop' },
+  ];
+
+  const categories = [
+    { id: 'all', label: 'Toutes' },
+    { id: 'Luxe', label: 'Luxe' },
+    { id: 'Casual', label: 'Casual' },
+    { id: 'Streetwear', label: 'Streetwear' },
+    { id: 'Vintage', label: 'Vintage' },
   ];
 
   React.useEffect(() => {
@@ -36,9 +48,15 @@ const ShopsScreen = () => {
     }).start();
   }, [fadeAnim]);
 
+  const filteredShops = shops.filter(shop => {
+    const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         shop.address.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || shop.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   const handleShopPress = (shopId) => {
-    console.log(`Navigating to shop ${shopId}`);
-    router.push(`clients/shopProfile`); // Navigation vers la page de la boutique
+    router.push(`clients/shopProfile`);
   };
 
   const renderShopCard = (shop, index) => (
@@ -88,9 +106,29 @@ const ShopsScreen = () => {
     </Animated.View>
   );
 
+  const renderCategoryButton = (category) => (
+    <TouchableOpacity
+      key={category.id}
+      style={[
+        styles.categoryButton,
+        selectedCategory === category.id && styles.categoryButtonActive,
+      ]}
+      onPress={() => setSelectedCategory(category.id)}
+    >
+      <Text
+        style={[
+          styles.categoryText,
+          selectedCategory === category.id && styles.categoryTextActive,
+        ]}
+      >
+        {category.label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { padding: width * 0.04 }]}>
+      <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
@@ -100,10 +138,41 @@ const ShopsScreen = () => {
         <Text style={[styles.pageTitle, { fontSize: width > 600 ? 28 : 24 }]}>
           Boutiques
         </Text>
-        {shops.map((shop, index) => renderShopCard(shop, index))}
+
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher une boutique..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryScrollContent}
+        >
+          {categories.map(renderCategoryButton)}
+        </ScrollView>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { padding: width * 0.04 }]}
+      >
+        {filteredShops.length > 0 ? (
+          filteredShops.map((shop, index) => renderShopCard(shop, index))
+        ) : (
+          <Text style={styles.noResults}>Aucune boutique trouvée</Text>
+        )}
+        {/* Espace supplémentaire pour le dernier élément */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      <BottomNavigation></BottomNavigation>
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -113,8 +182,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    paddingTop: 10,
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    zIndex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 80, // Réduit légèrement pour éviter un espace trop grand
   },
   backButton: {
     padding: 10,
@@ -126,7 +207,50 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 20,
+    marginBottom: 15,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    color: '#333',
+  },
+  categoryScroll: {
+    maxHeight: 50,
+  },
+  categoryScrollContent: {
+    paddingRight: 15,
+  },
+  categoryButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    backgroundColor: '#f5f5f5',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  categoryButtonActive: {
+    backgroundColor: '#2ecc71', // Vert pour la catégorie active
+    borderColor: '#2ecc71',
+  },
+  categoryText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  categoryTextActive: {
+    color: '#fff',
   },
   shopCard: {
     backgroundColor: '#f9f9f9',
@@ -176,7 +300,15 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 6,
   },
- 
+  noResults: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+    marginTop: 20,
+  },
+  bottomSpacer: {
+    height: 80, // Espace supplémentaire pour s'assurer que le dernier élément soit visible
+  },
 });
 
 export default ShopsScreen;
