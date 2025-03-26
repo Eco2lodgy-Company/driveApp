@@ -1,5 +1,5 @@
 // PanierScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,78 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {AuthContext} from "../../AuthContext";
 const PanierScreen = () => {
-  const [articles, setArticles] = useState([
-    { id: '1', name: 'Premium Coffee Maker', price: 89.99, quantity: 1, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085', description: 'High-quality coffee maker with timer' },
-    { id: '2', name: 'Stainless Steel Mug', price: 24.99, quantity: 2, image: 'https://images.unsplash.com/photo-1514228742587-6b93ef5afd35', description: 'Keeps drinks hot for 12 hours' },
-    { id: '3', name: 'Organic Coffee Beans', price: 15.99, quantity: 1, image: 'https://images.unsplash.com/photo-1494314675223-7d4f9cfd2d66', description: '1lb of freshly roasted beans' },
-    { id: '4', name: 'Coffee Grinder', price: 34.99, quantity: 1, image: 'https://images.unsplash.com/photo-1514043459281-2e18a275772c', description: 'Adjustable ceramic burr grinder' },
-  ]);
+  const [articles, setArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [orderStatus, setOrderStatus] = useState(null);
+  const [token, setToken] = useState(null);
+  const [userEmail, setUserEmail] = useState(null);
+  const [userId, setUserId] = useState(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem("user");
+        if (!userToken) {
+          console.error("Aucun token trouvé");
+          return;
+        }
+
+        const { token, email, id } = JSON.parse(userToken);
+        setToken(token);
+        setUserId(id);
+
+        if (id && token) {
+          fetchCartData(id, token);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du token :", error.message);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const fetchCartData = async (userId, token) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `http://195.35.24.128:8081/api/paniers/client/liste/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const transformedArticles = data.data.map((panier) => ({
+        id: panier.id.toString(),
+        name: panier.produits[0]?.nom || "Produit inconnu",
+        price: panier.produits[0]?.prix || 1,
+        quantity: panier.produits[0]?.quantite || 1,
+        image: panier.produits[0]?.image || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
+        description: panier.produits[0]?.description || "Aucune description",
+      }));
+
+      setArticles(transformedArticles);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données:", error);
+      Alert.alert("Erreur", "Impossible de charger les données du panier");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const updateQuantity = (id, quantity) => {
     const parsedQty = parseInt(quantity) || 1;
@@ -40,7 +101,7 @@ const PanierScreen = () => {
   };
 
   const calculateSubtotal = () => {
-    return articles.reduce((sum, article) => sum + article.price * article.quantity, 0);
+    return articles.reduce((sum, article) => sum + (article.price * article.quantity), 0);
   };
 
   const confirmOrder = async () => {
@@ -98,6 +159,16 @@ const PanierScreen = () => {
   const shipping = subtotal > 100 ? 0 : 9.99;
   const total = subtotal + shipping;
 
+  if (isLoading && articles.length === 0) {
+    return (
+      <SafeAreaView style={styles.safeContainer}>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#38A169" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.container}>
@@ -125,7 +196,7 @@ const PanierScreen = () => {
           showsVerticalScrollIndicator={false}
         >
           {articles.map((item) => (
-            <View key={item.id}>{renderItem(item)}</View> // Ajout de la prop key ici
+            <View key={item.id}>{renderItem(item)}</View>
           ))}
         </ScrollView>
 
