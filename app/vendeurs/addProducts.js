@@ -168,7 +168,7 @@ const AddProductScreen = () => {
       };
   
       formData.append('libelle', name.trim());
-      formData.append('acteurUsername', userEmail || 'bazoum@gmail.com');
+      formData.append('acteurUsername', userEmail );
       formData.append('codeQr', 'QR' + Date.now());
       formData.append('prix', parseFloat(price));
       formData.append('shopId', DEFAULT_SHOP_ID);

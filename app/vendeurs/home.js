@@ -116,12 +116,12 @@ const SellerDashboardScreen = () => {
             <Text style={styles.headerTitle}>Tableau de bord</Text>
             <TouchableOpacity
               style={styles.profileButton}
-              onPress={() => router.push('/sellers/profile')}
+              onPress={() => router.push('vendeurs/profile')}
             >
               <Icon name="user" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.headerSubtitle}>{user.email}</Text>
+          <Text style={styles.headerSubtitle}>{user.nom}  {user.prenom}</Text>
         </LinearGradient>
       </Animated.View>
 

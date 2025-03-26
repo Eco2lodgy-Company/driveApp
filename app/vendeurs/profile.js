@@ -51,7 +51,7 @@ const SellerProfileScreen = () => {
 
   const fetchShopData = async (id, token) => {
     try {
-      const response = await fetch(`http://195.35.24.128:8081/api/shop/find/${id}`, {
+      const response = await fetch(`http://195.35.24.128:8081/api/shop/findByVendeur/${id}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -85,7 +85,7 @@ const SellerProfileScreen = () => {
 
         const parsedToken = JSON.parse(userToken);
         console.log("Token trouvé :", parsedToken.token);
-        await fetchShopData(19, parsedToken.token);
+        await fetchShopData(parsedToken.id, parsedToken.token);
       } catch (error) {
         console.error("Erreur lors de la récupération du token :", error.message);
       }

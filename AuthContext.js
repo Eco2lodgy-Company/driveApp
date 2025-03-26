@@ -35,7 +35,9 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const userData = {
-          
+          id:data.data.userInfo.id,
+          nom: data.data.userInfo.nom,
+          prenom: data.data.userInfo.prenom,
           email: data.data.userInfo.email,
           role : data.data.userInfo.role,
           token : data.data.token,
