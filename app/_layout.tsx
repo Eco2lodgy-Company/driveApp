@@ -9,7 +9,7 @@ import { AuthContext, AuthProvider } from '../AuthContext';
 import { LocationProvider } from "../LocationContext";
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Empêche l'écran de chargement de disparaître automatiquement
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -32,45 +32,40 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <LocationProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/home" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/shopCreationScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/profile" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/products" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/addProducts" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/signup" options={{ headerShown: false }} />
-
-        <Stack.Screen name="vendeurs/orders" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/editProduct" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/productDetails" options={{ headerShown: false }} />
-        <Stack.Screen name="vendeurs/orderDetails" options={{ headerShown: false }} />
-
-
-
-        <Stack.Screen name="clients/onboarding" options={{ presentation: "modal" }} />
-        <Stack.Screen name="clients/login" options={{ presentation: "modal" }} />
-        <Stack.Screen name="clients/signup" options={{ presentation: "modal" }} />
-        <Stack.Screen name="clients/home" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/productScreen" options={{headerShown: false }} />
-        <Stack.Screen name="clients/cart" options={{ presentation: "modal" }} />
-        <Stack.Screen name="clients/profile" options={{ presentation: "modal", headerShown: false }} />
-        <Stack.Screen name="clients/shops" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/notifications" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/shopProfile" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/PaymentScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/DeliveryScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/TrackOrderScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/OrderScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/ProfileEditScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="clients/shopOption" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-     </LocationProvider> 
-     </AuthProvider>
-    
+          <Stack screenOptions={{ headerShown: false }}>  {/* Ajout ici */}
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="vendeurs/home" />
+            <Stack.Screen name="vendeurs/shopCreationScreen" />
+            <Stack.Screen name="vendeurs/profile" />
+            <Stack.Screen name="vendeurs/products" />
+            <Stack.Screen name="vendeurs/addProducts" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="vendeurs/signup" />
+            <Stack.Screen name="vendeurs/orders" />
+            <Stack.Screen name="vendeurs/editProduct" />
+            <Stack.Screen name="vendeurs/productDetails" />
+            <Stack.Screen name="vendeurs/orderDetails" />
+            <Stack.Screen name="clients/onboarding" options={{ presentation: "modal" }} />
+            <Stack.Screen name="clients/login" options={{ presentation: "modal" }} />
+            <Stack.Screen name="clients/signup" options={{ presentation: "modal" }} />
+            <Stack.Screen name="clients/home" />
+            <Stack.Screen name="clients/productScreen" />
+            <Stack.Screen name="clients/cart" options={{ presentation: "modal" }} />
+            <Stack.Screen name="clients/profile" options={{ presentation: "modal" }} />
+            <Stack.Screen name="clients/shops" />
+            <Stack.Screen name="clients/notifications" />
+            <Stack.Screen name="clients/shopProfile" />
+            <Stack.Screen name="clients/PaymentScreen" />
+            <Stack.Screen name="clients/DeliveryScreen" />
+            <Stack.Screen name="clients/TrackOrderScreen" />
+            <Stack.Screen name="clients/OrderScreen" />
+            <Stack.Screen name="clients/ProfileEditScreen" />
+            <Stack.Screen name="clients/shopOption" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </LocationProvider> 
+      </AuthProvider>
     </ThemeProvider>
   );
 }
