@@ -95,10 +95,15 @@ const SellerProfileScreen = () => {
   }, []);
 
   const handleLogout = async () => {
-    console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
-    await logout();
-    router.push('/login');
-  };
+    try {
+        console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
+        await logout();
+        router.push('/login');
+    } catch (error) {
+        console.error('Erreur lors de la déconnexion :', error);
+    }
+};
+
 
   return (
     <SafeAreaView style={styles.safeContainer}>
