@@ -104,7 +104,7 @@ const SellerSignupScreen = () => {
         duration: 500,
         useNativeDriver: true,
     }).start(async () => {
-        setTsimeout(async () => {
+        setTimeout(async () => {
             try {
                 await AsyncStorage.setItem("userDetails", JSON.stringify(formData));
                 router.push(`vendeurs/shopCreationScreen`);
