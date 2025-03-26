@@ -36,7 +36,7 @@ const HomeScreen = () => {
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
       console.error("Chemin invalide:", dbPath);
-      return "https://via.placeholder.com/150";
+      return "";
     }
     const basePath = "/root/data/drive/products/";
     const baseUrl = "http://alphatek.fr:8086/";
@@ -149,7 +149,6 @@ const HomeScreen = () => {
           resizeMode="cover"
           onError={(e) => {
             console.log('Erreur de chargement:', e.nativeEvent.error);
-            // Vous pouvez aussi mettre à jour l'URI vers une image de secours ici
           }}
         />
         <View style={styles.productInfo}>
@@ -167,6 +166,17 @@ const HomeScreen = () => {
         </View>
       </TouchableOpacity>
     </View>
+  );
+
+  const renderCategoryItem = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.filterButton, selectedCategory === item && styles.activeFilter]}
+      onPress={() => setSelectedCategory(item)}
+    >
+      <Text style={selectedCategory === item ? styles.activeFilterText : styles.filterText}>
+        {item}
+      </Text>
+    </TouchableOpacity>
   );
 
   return (
@@ -208,19 +218,14 @@ const HomeScreen = () => {
           onChangeText={setSearchQuery}
         />
 
-        <View style={styles.filterButtons}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[styles.filterButton, selectedCategory === category && styles.activeFilter]}
-              onPress={() => setSelectedCategory(category)}
-            >
-              <Text style={selectedCategory === category ? styles.activeFilterText : styles.filterText}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <FlatList
+          horizontal
+          data={categories}
+          renderItem={renderCategoryItem}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        />
 
         <View style={styles.section}>
           {loading ? (
@@ -228,7 +233,7 @@ const HomeScreen = () => {
           ) : (
             <>
               <Text style={styles.sectionTitle}>
-                {filteredProducts.length} produit(s) trouvé(s)
+                {/* {filteredProducts.length} produit(s) trouvé(s) */}
               </Text>
               <FlatList
                 data={filteredProducts}
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     flex: 1,
-    minHeight: 200,
+    minHeight: 100,
   },
   searchInput: {
     backgroundColor: '#fff',
@@ -296,20 +301,22 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     marginBottom: 12,
   },
-  filterButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+  filterContainer: {
+    flexDirection: 'row',  // Aligne les filtres horizontalement
+    alignItems: 'center',  // Centre verticalement
+    paddingVertical: 4,
+    marginTop: -320, // Réduire cette valeur si nécessaire
   },
   filterButton: {
-    padding: 8,
+    paddingVertical: 4, // Réduit de 6 à 4
+    paddingHorizontal: 10, // Réduit de 12 à 10
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 6, // Réduit de 8 à 6 pour un look plus compact
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 80,
+    minWidth: 60, // Réduit de 70 à 60
     alignItems: 'center',
+    marginRight: 8,
   },
   activeFilter: {
     backgroundColor: '#4CAF50',
@@ -318,10 +325,12 @@ const styles = StyleSheet.create({
   filterText: {
     color: '#111827',
     fontWeight: '600',
+    fontSize: 14, // Réduit de 14 à 12
   },
   activeFilterText: {
     color: '#fff',
     fontWeight: '600',
+    fontSize: 12, // Réduit de 14 à 12
   },
   section: {
     flex: 1,
@@ -330,10 +339,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 12,
+    marginTop: -300,
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 40,
   },
   productRow: {
     justifyContent: 'space-between',
