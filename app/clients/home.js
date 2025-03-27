@@ -20,8 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNavigation from './components/BottomNavigation';
 
 const ads = [
-  { id: 'ad-1', image: 'https://images.unsplash.com/photo-1741851374411-9528e6d2f33f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: 'ad-2', image: 'https://images.unsplash.com/photo-1741812191037-96bb5f12010a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxNXx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 'ad-1', image: 'https://plus.unsplash.com/premium_photo-1668133957823-456f1c87b58c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8YmxhY2slMjBmcmlkYXl8ZW58MHx8MHx8fDA%3D' },
+  { id: 'ad-2', image: 'https://images.unsplash.com/photo-1526178613552-2b45c6c302f0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGJsYWNrJTIwZnJpZGF5fGVufDB8fDB8fHww' },
   { id: 'ad-3', image: 'https://images.unsplash.com/photo-1742156345582-b857d994c84e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyMnx8fGVufDB8fHx8fA%3D%3D' },
 ];
 
