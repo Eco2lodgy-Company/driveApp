@@ -29,30 +29,36 @@ const ShopsScreen = () => {
   const [token, setToken] = useState(null);
   const [userId, setUserId] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
+  const [imgUrl, setImgUrl] = useState('');
   const [error, setError] = useState(null);
 
-
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/shop/";
+    const baseUrl = "http://alphatek.fr:8084/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+  
   const fetchUserData = useCallback(async () => {
     try {
       const userToken = await AsyncStorage.getItem("user");
       if (!userToken) throw new Error("Aucun token trouvé");
-
+  
       const { token, email, id } = JSON.parse(userToken);
       setToken(token);
       setUserId(id);
       setUserEmail(email);
-
-      if (id && token) {
-        fetchCartData(id, token);
-      }
     } catch (error) {
       console.error("Erreur lors de la récupération du token :", error.message);
     }
   }, []);
-
+  
   const fetchShops = useCallback(async () => {
-    if (!userEmail || !token) return;
-
+    if (!userEmail || !token) return; // Attendre que les valeurs soient définies
+  
     try {
       const response = await fetch(
         `http://195.35.24.128:8081/api/shop/liste?username=${userEmail}`,
@@ -64,9 +70,10 @@ const ShopsScreen = () => {
           },
         }
       );
-
+  
       const result = await response.json();
       if (result.status === "success" && Array.isArray(result.data)) {
+        console.log("Shops récupérés:", result.data);
         setShops(result.data);
       } else {
         throw new Error(result.message || "Erreur lors de la récupération des shops");
@@ -77,15 +84,30 @@ const ShopsScreen = () => {
       setLoading(false);
     }
   }, [userEmail, token]);
-
+  
+  // Met à jour imgUrl après la mise à jour de shops
+  useEffect(() => {
+    if (shops.length > 0 && shops[0]?.bannerPath) {
+      const imageUrl = convertPathToUrl(shops[0].bannerPath);
+      console.log("URL de l'image convertie :", imageUrl);
+      setImgUrl(imageUrl);
+      console.log("URL de l'image définie :", imgUrl);
+    }
+  }, [shops]);
+  
+  // Exécuter fetchUserData au montage
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
-
+  
+  // Attendre que fetchUserData ait défini userEmail et token avant de lancer fetchShops
   useEffect(() => {
-    fetchShops();
-  }, [fetchShops]);
-
+    if (userEmail && token) {
+      fetchShops();
+    }
+  }, [userEmail, token, fetchShops]);
+  
+  // Animation au montage
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -93,6 +115,8 @@ const ShopsScreen = () => {
       useNativeDriver: true,
     }).start();
   }, []);
+  
+  console.log("shops", imgUrl);
 
   const filteredShops = shops.filter(shop => {
     const matchesSearch = shop.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -129,7 +153,7 @@ const ShopsScreen = () => {
         activeOpacity={0.85}
       >
         <Image 
-          source={{ uri: shop.bannerPath.startsWith('http') ? shop.bannerPath : `http://195.35.24.128:8081${shop.bannerPath}` }} 
+          source={{ uri: imgUrl}} 
           style={[styles.shopImage, { width: width * 0.35, height: width * 0.35 }]} 
           resizeMode="cover"
           onError={() => console.log(`Erreur de chargement de l'image pour ${shop.nom}`)}
