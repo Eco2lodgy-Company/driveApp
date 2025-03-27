@@ -8,15 +8,22 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  ScrollView,
   useWindowDimensions,
   Animated,
-  ActivityIndicator, // Ajouté pour l'animation
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNavigation from './components/BottomNavigation';
+
+const ads = [
+  { id: 'ad-1', image: 'https://images.unsplash.com/photo-1741851374411-9528e6d2f33f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 'ad-2', image: 'https://images.unsplash.com/photo-1741812191037-96bb5f12010a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxNXx8fGVufDB8fHx8fA%3D%3D' },
+  { id: 'ad-3', image: 'https://images.unsplash.com/photo-1742156345582-b857d994c84e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyMnx8fGVufDB8fHx8fA%3D%3D' },
+];
 
 const categories = ["All", "Clothing", "Shoes", "Accessories", "Jewelry", "Bags"];
 
@@ -32,7 +39,7 @@ const HomeScreen = () => {
   const [userData, setUserData] = useState(null);
   const numColumns = Math.max(2, Math.floor(width / 180));
   const cardWidth = (width - 48) / numColumns;
-  
+
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
       console.error("Chemin invalide:", dbPath);
@@ -70,7 +77,6 @@ const HomeScreen = () => {
         console.error('Erreur lors de la récupération de l\'utilisateur:', error);
       }
     };
-  
     fetchUserData();
   }, []);
 
@@ -80,12 +86,8 @@ const HomeScreen = () => {
         console.error('Token utilisateur manquant');
         return;
       }
-
       try {
         setLoading(true);
-        console.log('Email utilisateur:', userData.email); 
-        console.log('Token utilisateur:', userData.token);
-
         const apiUrl = `http://195.35.24.128:8081/api/products/liste?username=${userData.email}`;
         const requestConfig = {
           method: 'GET',
@@ -94,17 +96,12 @@ const HomeScreen = () => {
             Authorization: `Bearer ${userData.token}`,
           },
         };
-
         const response = await fetch(apiUrl, requestConfig);
         if (!response.ok) {
           const errorData = await response.text();
-          console.error('Détails erreur API:', errorData);
           throw new Error(`Erreur API: ${response.status}`);
         }
-
         const data = await response.json();
-        console.log('Données de l\'API', data.data);
-
         const mappedProducts = data.data.map((item) => ({
           id: item.id.toString(),
           name: item.libelle,
@@ -113,10 +110,7 @@ const HomeScreen = () => {
           category: item.categorieIntitule,
           image: convertPathToUrl(item.imagePath),
         }));
-        
         setProducts(mappedProducts);
-        console.log('Nombre de produits:', mappedProducts.length);
-        
       } catch (error) {
         console.error('Erreur lors de la récupération des produits:', error);
         setProducts([]);
@@ -124,7 +118,6 @@ const HomeScreen = () => {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, [userData]);
 
@@ -147,9 +140,6 @@ const HomeScreen = () => {
           source={{ uri: item.image || 'https://via.placeholder.com/150' }}
           style={styles.productImage}
           resizeMode="cover"
-          onError={(e) => {
-            console.log('Erreur de chargement:', e.nativeEvent.error);
-          }}
         />
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
@@ -166,6 +156,16 @@ const HomeScreen = () => {
         </View>
       </TouchableOpacity>
     </View>
+  );
+
+  const renderAdItem = ({ item }) => (
+    <TouchableOpacity style={styles.adContainer}>
+      <Image
+        source={{ uri: item.image }}
+        style={styles.adImage}
+        resizeMode="cover"
+      />
+    </TouchableOpacity>
   );
 
   const renderCategoryItem = ({ item }) => (
@@ -236,44 +236,60 @@ const HomeScreen = () => {
         </LinearGradient>
       </Animated.View>
 
-      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.fixedContent, { opacity: fadeAnim }]}>
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher (produit, boutique...)"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+      </Animated.View>
 
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Filtres */}
+        <View style={styles.filterWrapper}>
+          <FlatList
+            horizontal
+            data={categories}
+            renderItem={renderCategoryItem}
+            keyExtractor={(item) => item}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContainer}
+          />
+        </View>
+
+        {/* Publicités swipables */}
         <FlatList
           horizontal
-          data={categories}
-          renderItem={renderCategoryItem}
-          keyExtractor={(item) => item}
+          data={ads}
+          renderItem={renderAdItem}
+          keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
+          contentContainerStyle={styles.adListContainer}
+          pagingEnabled
+          snapToAlignment="center"
+          decelerationRate="fast"
         />
 
-        <View style={styles.section}>
-          <>
-            <Text style={styles.sectionTitle}>
-              {/* {filteredProducts.length} produit(s) trouvé(s) */}
-            </Text>
-            <FlatList
-              data={filteredProducts}
-              renderItem={renderProduct}
-              keyExtractor={(item) => item.id}
-              numColumns={numColumns}
-              key={numColumns}
-              columnWrapperStyle={styles.productRow}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-              }
-            />
-          </>
-        </View>
-      </Animated.View>
+        {/* Produits */}
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProduct}
+          keyExtractor={(item) => item.id}
+          numColumns={numColumns}
+          key={numColumns}
+          columnWrapperStyle={styles.productRow}
+          contentContainerStyle={styles.listContent}
+          scrollEnabled={false} // Désactive le scroll interne pour laisser la ScrollView parent gérer
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+          }
+        />
+      </ScrollView>
 
       <BottomNavigation />
     </SafeAreaView>
@@ -310,10 +326,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     borderRadius: 10,
   },
-  contentContainer: {
-    padding: 16,
-    flex: 1,
-    minHeight: 100,
+  fixedContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: '#F9FAFB',
   },
   searchInput: {
     backgroundColor: '#fff',
@@ -323,22 +339,29 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     marginBottom: 12,
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  filterWrapper: {
+    marginBottom: 12,
+  },
   filterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 4,
-    marginTop: -320,
   },
   filterButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     backgroundColor: '#fff',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 60,
-    alignItems: 'center',
     marginRight: 8,
+    minWidth: 70,
+    alignItems: 'center',
   },
   activeFilter: {
     backgroundColor: '#4CAF50',
@@ -352,19 +375,27 @@ const styles = StyleSheet.create({
   activeFilterText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 14,
   },
-  section: {
-    flex: 1,
+  adListContainer: {
+    paddingVertical: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: -300,
+  adContainer: {
+    marginRight: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  adImage: {
+    width: 300,
+    height: 150,
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   productRow: {
     justifyContent: 'space-between',
@@ -429,7 +460,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff', // Fond blanc comme demandé
+    backgroundColor: '#fff',
   },
   loadingAnimation: {
     alignItems: 'center',
