@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,13 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
+import { LocationContext } from '../../LocationContext'; // Remplace par le chemin correct
 
 const DeliveryScreen = () => {
   const router = useRouter();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
+  const { location, errorMsg } = useContext(LocationContext);
 
   // États
   const [selectedOption, setSelectedOption] = useState(null);
@@ -75,11 +78,43 @@ const DeliveryScreen = () => {
     }
   };
 
+  // Mettre à jour l'adresse à partir de la localisation
   useEffect(() => {
-    fetchDeliveryOptions();
-  }, []);
+    const updateAddressFromLocation = async () => {
+      if (!location) {
+        console.log("Aucune localisation disponible pour le moment");
+        return;
+      }
 
-  // Mettre à jour les suggestions quand customAddress change
+      console.log("Localisation disponible :", location);
+      try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+        console.log("Résultat du reverse geocoding :", reverseGeocode);
+
+        if (reverseGeocode.length > 0) {
+          const address = `${reverseGeocode[0].street || ''}, ${reverseGeocode[0].city || ''} ${reverseGeocode[0].postalCode || ''}`;
+          console.log("Adresse générée :", address);
+          setCustomAddress(address);
+        } else {
+          setError("Impossible de trouver une adresse pour cette localisation");
+        }
+      } catch (err) {
+        console.error('Erreur lors du reverse geocoding:', err);
+        setError('Impossible de convertir la position en adresse');
+      }
+    };
+
+    fetchDeliveryOptions();
+    updateAddressFromLocation();
+
+    if (errorMsg) {
+      setError(errorMsg);
+    }
+  }, [location, errorMsg]);
+
   useEffect(() => {
     fetchCustomSuggestions(customAddress);
     setIsDropdownVisible(customAddress.trim().length > 0);
@@ -157,7 +192,6 @@ const DeliveryScreen = () => {
           Choisir un lieu de livraison
         </Text>
 
-        {/* Champ personnalisé avec liste déroulante */}
         <View style={styles.customAddressSection}>
           <Text style={styles.sectionTitle}>Adresse personnalisée</Text>
           <View style={styles.customAddressInputContainer}>
@@ -178,7 +212,6 @@ const DeliveryScreen = () => {
           )}
         </View>
 
-        {/* Liste des options de livraison */}
         <View style={styles.optionsContainer}>
           {loading ? (
             <ActivityIndicator size="large" color="#2ecc71" />
@@ -191,7 +224,6 @@ const DeliveryScreen = () => {
           )}
         </View>
 
-        {/* Bouton de confirmation */}
         <TouchableOpacity
           style={[styles.confirmButton, !selectedOption && styles.confirmButtonDisabled]}
           onPress={handleConfirm}
@@ -215,7 +247,6 @@ const DeliveryScreen = () => {
         <View style={styles.spacer} />
       </ScrollView>
 
-      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         {[
           { icon: 'home', label: 'Home', route: '/clients/home' },

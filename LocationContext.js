@@ -19,18 +19,21 @@ export const LocationProvider = ({ children }) => {
       }
   
       console.log("Permission accordée. Récupération de la position...");
-      let position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-  
-      console.log("Position récupérée :", position.coords);
-      setLocation(position.coords);
+      try {
+        let position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        console.log("Position récupérée :", position.coords);
+        setLocation(position.coords);
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la position :", error);
+        setErrorMsg("Erreur lors de la récupération de la position.");
+      }
     };
   
     getLocation();
   }, []);
   
-
   return (
     <LocationContext.Provider value={{ location, errorMsg }}>
       {children}

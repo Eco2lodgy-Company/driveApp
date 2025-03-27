@@ -58,7 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="clients/PaymentScreen" />
             <Stack.Screen name="clients/DeliveryScreen" />
             <Stack.Screen name="clients/TrackOrderScreen" />
-            <Stack.Screen name="clients/OrderScreen" />
+            <Stack.Screen name="clients/OrdersScreen" />
             <Stack.Screen name="clients/ProfileEditScreen" />
             <Stack.Screen name="clients/shopOption" />
             <Stack.Screen name="+not-found" />
