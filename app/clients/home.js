@@ -25,6 +25,9 @@ const ads = [
   { id: 'ad-3', image: 'https://images.unsplash.com/photo-1742156345582-b857d994c84e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyMnx8fGVufDB8fHx8fA%3D%3D' },
 ];
 
+// Créer une liste infinie en dupliquant les éléments plusieurs fois
+const infiniteAds = [...ads, ...ads, ...ads, ...ads, ...ads]; // Duplique 5 fois pour éviter les limites visibles
+
 const categories = ["All", "Clothing", "Shoes", "Accessories", "Jewelry", "Bags"];
 
 const HomeScreen = () => {
@@ -39,6 +42,8 @@ const HomeScreen = () => {
   const [userData, setUserData] = useState(null);
   const numColumns = Math.max(2, Math.floor(width / 180));
   const cardWidth = (width - 48) / numColumns;
+  const adFlatListRef = useRef(null);
+  const adWidth = width - 32; // Largeur de chaque pub ajustée à l'écran avec marges
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
@@ -121,6 +126,33 @@ const HomeScreen = () => {
     fetchProducts();
   }, [userData]);
 
+  // Défilement automatique des publicités en boucle infinie
+  useEffect(() => {
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (adFlatListRef.current && infiniteAds.length > 0) {
+        currentIndex = (currentIndex + 1) % ads.length; // Boucle sur la longueur originale
+        const offset = currentIndex * adWidth; // Offset basé sur la largeur dynamique
+        adFlatListRef.current.scrollToOffset({
+          offset: offset,
+          animated: true,
+        });
+
+        // Repositionnement discret au début après une boucle complète
+        if (currentIndex === 0) {
+          setTimeout(() => {
+            adFlatListRef.current.scrollToOffset({
+              offset: 0,
+              animated: false,
+            });
+          }, 500); // Délai pour laisser l'animation se terminer
+        }
+      }
+    }, 3000); // Défilement toutes les 3 secondes
+
+    return () => clearInterval(interval); // Nettoyage de l'intervalle
+  }, [adWidth]); // Dépendance sur adWidth pour recalcul si la largeur change
+
   const filteredProducts = products?.filter((product) => {
     if (!product) return false;
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
@@ -162,7 +194,7 @@ const HomeScreen = () => {
     <TouchableOpacity style={styles.adContainer}>
       <Image
         source={{ uri: item.image }}
-        style={styles.adImage}
+        style={[styles.adImage, { width: adWidth }]} // Largeur dynamique
         resizeMode="cover"
       />
     </TouchableOpacity>
@@ -262,20 +294,25 @@ const HomeScreen = () => {
           />
         </View>
 
-        {/* Publicités swipables */}
-        <FlatList
-          horizontal
-          data={ads}
-          renderItem={renderAdItem}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.adListContainer}
-          pagingEnabled
-          snapToAlignment="center"
-          decelerationRate="fast"
-        />
+        {/* Section Publicités */}
+        <Text style={styles.sectionTitle}>Publicités</Text>
+        <View style={styles.adWrapper}>
+          <FlatList
+            ref={adFlatListRef}
+            horizontal
+            data={infiniteAds}
+            renderItem={renderAdItem}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.adListContainer}
+            snapToInterval={adWidth} // Aligne chaque pub à la largeur de l'écran
+            decelerationRate="fast"
+            initialScrollIndex={0}
+          />
+        </View>
 
-        {/* Produits */}
+        {/* Section Articles */}
+        <Text style={styles.sectionTitle}>Articles</Text>
         <FlatList
           data={filteredProducts}
           renderItem={renderProduct}
@@ -284,7 +321,7 @@ const HomeScreen = () => {
           key={numColumns}
           columnWrapperStyle={styles.productRow}
           contentContainerStyle={styles.listContent}
-          scrollEnabled={false} // Désactive le scroll interne pour laisser la ScrollView parent gérer
+          scrollEnabled={false}
           ListEmptyComponent={
             <Text style={styles.emptyText}>Aucun produit trouvé</Text>
           }
@@ -377,6 +414,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  adWrapper: {
+    width: '100%',
+    overflow: 'hidden', // Masque les pubs non visibles
+  },
   adListContainer: {
     paddingVertical: 8,
   },
@@ -391,7 +439,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   adImage: {
-    width: 300,
     height: 150,
   },
   listContent: {
