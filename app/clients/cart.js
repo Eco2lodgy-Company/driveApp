@@ -22,8 +22,19 @@ const PanierScreen = () => {
   const [orderStatus, setOrderStatus] = useState(null);
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
+  const [imgUrl,setImgUrl] = useState('');
   const [userId, setUserId] = useState(null);
   const router = useRouter();
+
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -74,7 +85,7 @@ const PanierScreen = () => {
         name: panier.produits[0]?.nom || "Produit inconnu",
         price: panier.produits[0]?.prix || 1,
         quantity: panier.produits[0]?.quantite || 1,
-        image: panier.produits[0]?.image || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
+        image: convertPathToUrl(panier.produits[0]?.imagePath) || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
         description: panier.produits[0]?.description || "Aucune description",
       }));
 
