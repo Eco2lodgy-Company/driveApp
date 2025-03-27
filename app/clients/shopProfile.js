@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -6,56 +6,107 @@ import {
   StyleSheet, 
   ScrollView, 
   FlatList, 
-  Dimensions,
   TouchableOpacity,
   Linking,
-  useWindowDimensions, // Ajout pour des dimensions dynamiques
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-
-// Données d'exemple
-const shopData = {
-  name: "Ma Boutique Élégante",
-  description: "Bienvenue dans notre boutique de produits uniques et de qualité",
-  banner: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  address: "123 Rue de l'Exemple, 75001 Paris",
-  phone: "+33 1 23 45 67 89",
-  rating: 4.5,
-  categories: ["Tous", "Mode", "Accessoires", "Déco"],
-  products: [
-    { id: '1', name: 'Robe Élégante', price: 59.99, category: 'Mode', image: 'https://images.unsplash.com/photo-1561526116-e2460f4d40a9?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-    { id: '2', name: 'Collier Perlé', price: 29.99, category: 'Accessoires', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-    { id: '3', name: 'Vase Design', price: 39.99, category: 'Déco', image: 'https://images.unsplash.com/photo-1609709295948-17d77cb2a69b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y2xvdGhzfGVufDB8fDB8fHww' },
-    { id: '4', name: 'Chemise Classique', price: 49.99, category: 'Mode', image: 'https://images.unsplash.com/photo-1630329273801-8f629dba0a72?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: '5', name: 'Chemise Classique', price: 49.99, category: 'Mode', image: 'https://images.unsplash.com/photo-1600805624740-ebe68a29ac69?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: '6', name: 'Chemise Classique', price: 49.99, category: 'Mode', image: 'https://images.unsplash.com/photo-1630329273801-8f629dba0a72?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-  { id: '7', name: 'Chemise Classique', price: 49.99, category: 'Mode', image: 'https://images.unsplash.com/photo-1630329273801-8f629dba0a72?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' },
-
-],};
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ShopScreen = () => {
+  const [shopData, setShopData] = useState(null);
+  const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("Tous");
-  const { width, height } = useWindowDimensions(); // Dimensions dynamiques
+  const [categories, setCategories] = useState(["Tous"]);
+  const { width, height } = useWindowDimensions();
+  const [token, setToken] = useState("");
+  const [userId, setUserId] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
+  const { shopId } = useLocalSearchParams(); // Récupération de l'ID depuis l'URL
+
+const fetchUserData = useCallback(async () => {
+  try {
+    const userToken = await AsyncStorage.getItem("user");
+    if (!userToken) throw new Error("Aucun token trouvé");
+
+    const { token, email, id } = JSON.parse(userToken);
+    setToken(token);
+    setUserId(id);
+    setUserEmail(email);
+  } catch (error) {
+    console.error("Erreur lors de la récupération du token :", error.message);
+  }
+}, []);
+
+useEffect(() => {
+  fetchUserData(); // Exécuter au montage pour charger les données utilisateur
+}, []);
+
+useEffect(() => {
+  if (!shopId || !token || !userEmail) return; // Vérifie que toutes les données sont disponibles
+
+  const fetchShopData = async () => {
+    try {
+      console.log(token,userEmail);
+      const shopResponse = await fetch(`http://195.35.24.128:8081/api/shop/find/${shopId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const shopResult = await shopResponse.json();
+      if (shopResult.status === "success") {
+        setShopData(shopResult.data);
+      }
+
+      const productsResponse = await fetch(
+        `http://195.35.24.128:8081/api/products/findByShop/${shopId}?username=${userEmail}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const productsResult = await productsResponse.json();
+      if (productsResult.status === "success") {
+        setProducts(productsResult.data);
+        const uniqueCategories = [
+          "Tous",
+          ...new Set(productsResult.data.map(product => product.categorieIntitule))
+        ];
+        setCategories(uniqueCategories);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données:', error);
+    }
+  };
+
+  fetchShopData();
+}, [shopId, token, userEmail]); // Ajout de `token` et `userEmail` dans les dépendances
+
+
   // Calculs pour la grille responsive
-  const numColumns = Math.floor(width / 180); // Ajuste selon la taille minimale des cartes
-  const cardWidth = width / numColumns - 20; // 20 pour les marges
+  const numColumns = Math.floor(width / 180);
+  const cardWidth = width / numColumns - 20;
 
   // Filtrer les produits
-  const filteredProducts = selectedCategory === "Tous" 
-    ? shopData.products 
-    : shopData.products.filter(product => product.category === selectedCategory);
+  const filteredProducts = selectedCategory === "Tous"
+    ? products
+    : products.filter(product => product.categorieIntitule === selectedCategory);
 
-  // Afficher les étoiles
+  // Afficher les étoiles (par défaut à 4.5 car pas dans l'API)
   const renderRating = () => {
     const stars = [];
+    const rating = 4.5; // Valeur par défaut
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <Ionicons
           key={i}
-          name={i <= Math.floor(shopData.rating) ? "star" : "star-outline"}
-          size={width > 600 ? 24 : 20} // Plus grand sur tablettes
+          name={i <= Math.floor(rating) ? "star" : "star-outline"}
+          size={width > 600 ? 24 : 20}
           color="#f1c40f"
         />
       );
@@ -65,16 +116,17 @@ const ShopScreen = () => {
 
   // Rendu des produits
   const renderProduct = ({ item }) => (
-    <TouchableOpacity style={[styles.productCard, { width: cardWidth }]}
-    onPress={() => router.push(`/clients/ProductScreen?productId=${item.id}`)}
+    <TouchableOpacity 
+      style={[styles.productCard, { width: cardWidth }]}
+      onPress={() => router.push(`/clients/ProductScreen?productId=${item.id}`)}
     >
       <Image 
-        source={{ uri: item.image }} 
-        style={[styles.productImage, { height: cardWidth * 0.8 }]} // Ratio image
+        source={{ uri: `http://195.35.24.128:8081${item.imagePath}` }} 
+        style={[styles.productImage, { height: cardWidth * 0.8 }]}
         resizeMode="cover"
       />
-      <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-      <Text style={styles.productPrice}>{item.price.toFixed(2)} €</Text>
+      <Text style={styles.productName} numberOfLines={1}>{item.libelle}</Text>
+      <Text style={styles.productPrice}>{item.prix.toFixed(2)} €</Text>
     </TouchableOpacity>
   );
 
@@ -84,7 +136,7 @@ const ShopScreen = () => {
       style={[
         styles.categoryButton,
         selectedCategory === category && styles.categoryButtonActive,
-        { paddingHorizontal: width > 600 ? 20 : 15 } // Plus large sur grands écrans
+        { paddingHorizontal: width > 600 ? 20 : 15 }
       ]}
       onPress={() => setSelectedCategory(category)}
     >
@@ -100,22 +152,31 @@ const ShopScreen = () => {
     </TouchableOpacity>
   );
 
+  // Chargement en cours ou ID manquant
+  if (!shopId || !shopData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>{!shopId ? "ID de boutique manquant" : "Chargement..."}</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView 
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: height * 0.05 }} // Marge bottom dynamique
+      contentContainerStyle={{ paddingBottom: height * 0.05 }}
     >
       {/* Bannière */}
       <Image 
-        source={{ uri: shopData.banner }} 
-        style={[styles.banner, { height: height * 0.25 }]} // Hauteur relative
+        source={{ uri: `http://195.35.24.128:8081${shopData.bannerPath}` }} 
+        style={[styles.banner, { height: height * 0.25 }]}
         resizeMode="cover"
       />
 
       {/* Informations */}
       <View style={[styles.infoContainer, { padding: width * 0.04 }]}>
         <Text style={[styles.shopName, { fontSize: width > 600 ? 28 : 24 }]}>
-          {shopData.name}
+          {shopData.nom}
         </Text>
         <View style={styles.ratingContainer}>{renderRating()}</View>
         <Text 
@@ -125,20 +186,20 @@ const ShopScreen = () => {
         </Text>
         <TouchableOpacity 
           style={styles.contactInfo}
-          onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData.address)}`)}
+          onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData.adresse)}`)}
         >
           <Ionicons name="location-outline" size={width > 600 ? 24 : 20} color="#666" />
           <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-            {shopData.address}
+            {shopData.adresse}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.contactInfo}
-          onPress={() => Linking.openURL(`tel:${shopData.phone}`)}
+          onPress={() => Linking.openURL(`tel:${shopData.telephone}`)}
         >
           <Ionicons name="call-outline" size={width > 600 ? 24 : 20} color="#666" />
           <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-            {shopData.phone}
+            {shopData.telephone}
           </Text>
         </TouchableOpacity>
       </View>
@@ -146,7 +207,7 @@ const ShopScreen = () => {
       {/* Catégories */}
       <View style={[styles.categoriesContainer, { paddingHorizontal: width * 0.04 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {shopData.categories.map(category => (
+          {categories.map(category => (
             <View key={category}>
               {renderCategory(category)}
             </View>
@@ -162,9 +223,9 @@ const ShopScreen = () => {
         <FlatList
           data={filteredProducts}
           renderItem={renderProduct}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.id.toString()}
           numColumns={numColumns}
-          key={numColumns} // Forcer la mise à jour de la grille
+          key={numColumns}
           columnWrapperStyle={styles.productRow}
           scrollEnabled={false}
           ListEmptyComponent={<Text style={styles.emptyText}>Aucun produit dans cette catégorie</Text>}
@@ -262,6 +323,11 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

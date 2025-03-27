@@ -112,7 +112,7 @@ const ShopsScreen = () => {
   });
 
   const handleShopPress = (shopId) => {
-    router.push(`clients/shopProfile`);
+    router.push(`clients/shopProfile?shopId=${shopId}`);
   };
 
   const renderShopCard = (shop, index) => {
