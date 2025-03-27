@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useCallback} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {AuthContext} from "../../AuthContext";
 import BottomNavigation from './components/BottomNavigation';
 
 const ShopsScreen = () => {
@@ -29,13 +28,12 @@ const ShopsScreen = () => {
   const [token, setToken] = useState(null);
   const [userId, setUserId] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
-  const [imgUrl, setImgUrl] = useState('');
   const [error, setError] = useState(null);
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
       console.error("Chemin invalide:", dbPath);
-      return "";
+      return "https://via.placeholder.com/150"; // Image par défaut
     }
     const basePath = "/root/data/drive/shop/";
     const baseUrl = "http://alphatek.fr:8084/";
@@ -85,16 +83,6 @@ const ShopsScreen = () => {
     }
   }, [userEmail, token]);
   
-  // Met à jour imgUrl après la mise à jour de shops
-  useEffect(() => {
-    if (shops.length > 0 && shops[0]?.bannerPath) {
-      const imageUrl = convertPathToUrl(shops[0].bannerPath);
-      console.log("URL de l'image convertie :", imageUrl);
-      setImgUrl(imageUrl);
-      console.log("URL de l'image définie :", imgUrl);
-    }
-  }, [shops]);
-  
   // Exécuter fetchUserData au montage
   useEffect(() => {
     fetchUserData();
@@ -115,8 +103,6 @@ const ShopsScreen = () => {
       useNativeDriver: true,
     }).start();
   }, []);
-  
-  console.log("shops", imgUrl);
 
   const filteredShops = shops.filter(shop => {
     const matchesSearch = shop.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -129,53 +115,57 @@ const ShopsScreen = () => {
     router.push(`clients/shopProfile`);
   };
 
-  const renderShopCard = (shop, index) => (
-    <Animated.View
-      key={shop.id}
-      style={[
-        styles.shopCard,
-        {
-          opacity: fadeAnim,
-          transform: [
-            {
-              translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30 * (index + 1), 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <TouchableOpacity
-        style={styles.cardContent}
-        onPress={() => handleShopPress(shop.id)}
-        activeOpacity={0.85}
+  const renderShopCard = (shop, index) => {
+    const imageUrl = convertPathToUrl(shop.bannerPath); // Calculer l'URL pour chaque boutique
+
+    return (
+      <Animated.View
+        key={shop.id}
+        style={[
+          styles.shopCard,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30 * (index + 1), 0],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        <Image 
-          source={{ uri: imgUrl}} 
-          style={[styles.shopImage, { width: width * 0.35, height: width * 0.35 }]} 
-          resizeMode="cover"
-          onError={() => console.log(`Erreur de chargement de l'image pour ${shop.nom}`)}
-        />
-        <View style={styles.shopInfo}>
-          <Text style={[styles.shopName, { fontSize: width > 600 ? 20 : 18 }]}>
-            {shop.nom}
-          </Text>
-          <View style={styles.addressContainer}>
-            <Icon name="map-pin" size={width > 600 ? 16 : 14} color="#666" />
-            <Text style={[styles.shopAddress, { fontSize: width > 600 ? 14 : 12 }]}>
-              {shop.adresse}
+        <TouchableOpacity
+          style={styles.cardContent}
+          onPress={() => handleShopPress(shop.id)}
+          activeOpacity={0.85}
+        >
+          <Image
+            source={{ uri: imageUrl }} // Utiliser l'URL spécifique à cette boutique
+            style={[styles.shopImage, { width: width * 0.35, height: width * 0.35 }]}
+            resizeMode="cover"
+            onError={() => console.log(`Erreur de chargement de l'image pour ${shop.nom}`)}
+          />
+          <View style={styles.shopInfo}>
+            <Text style={[styles.shopName, { fontSize: width > 600 ? 20 : 18 }]}>
+              {shop.nom}
             </Text>
+            <View style={styles.addressContainer}>
+              <Icon name="map-pin" size={width > 600 ? 16 : 14} color="#666" />
+              <Text style={[styles.shopAddress, { fontSize: width > 600 ? 14 : 12 }]}>
+                {shop.adresse}
+              </Text>
+            </View>
+            <View style={styles.ratingContainer}>
+              <Icon name="phone" size={width > 600 ? 16 : 14} color="#666" />
+              <Text style={styles.ratingText}>{shop.telephone}</Text>
+            </View>
           </View>
-          <View style={styles.ratingContainer}>
-            <Icon name="phone" size={width > 600 ? 16 : 14} color="#666" />
-            <Text style={styles.ratingText}>{shop.telephone}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   const categories = [
     { id: 'all', label: 'Toutes' },
