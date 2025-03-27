@@ -26,6 +26,30 @@ const ShopScreen = () => {
   const router = useRouter();
   const { shopId } = useLocalSearchParams(); // Récupération de l'ID depuis l'URL
 
+  //fonction pour convertir l'URL brute des image en URL pour acceder aux images depuis le serveur
+  const convertShopsPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return ""; // Image par défaut
+    }
+    const basePath = "/root/data/drive/shop/";
+    const baseUrl = "http://alphatek.fr:8084/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+
+
+  const convertProductsPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return ""; // Image par défaut
+    }
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+
+
+
 const fetchUserData = useCallback(async () => {
   try {
     const userToken = await AsyncStorage.getItem("user");
@@ -49,7 +73,7 @@ useEffect(() => {
 
   const fetchShopData = async () => {
     try {
-      console.log(token,userEmail);
+      //console.log(token,userEmail);
       const shopResponse = await fetch(`http://195.35.24.128:8081/api/shop/find/${shopId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -121,7 +145,7 @@ useEffect(() => {
       onPress={() => router.push(`/clients/ProductScreen?productId=${item.id}`)}
     >
       <Image 
-        source={{ uri: `http://195.35.24.128:8081${item.imagePath}` }} 
+        source={{ uri: convertProductsPathToUrl(item.imagePath) }} 
         style={[styles.productImage, { height: cardWidth * 0.8 }]}
         resizeMode="cover"
       />
