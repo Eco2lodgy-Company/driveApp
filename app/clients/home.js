@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   TextInput,
   useWindowDimensions,
   Animated,
+  ActivityIndicator, // Ajouté pour l'animation
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { AuthContext } from '../../AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNavigation from './components/BottomNavigation';
 
@@ -179,6 +179,32 @@ const HomeScreen = () => {
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeContainer}>
+        <View style={styles.loadingContainer}>
+          <Animated.View
+            style={[
+              styles.loadingAnimation,
+              {
+                opacity: fadeAnim,
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.loadingText}>Chargement des produits...</Text>
+          </Animated.View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeContainer}>
       <Animated.View
@@ -228,28 +254,24 @@ const HomeScreen = () => {
         />
 
         <View style={styles.section}>
-          {loading ? (
-            <Text style={styles.loadingText}>Chargement des produits...</Text>
-          ) : (
-            <>
-              <Text style={styles.sectionTitle}>
-                {/* {filteredProducts.length} produit(s) trouvé(s) */}
-              </Text>
-              <FlatList
-                data={filteredProducts}
-                renderItem={renderProduct}
-                keyExtractor={(item) => item.id}
-                numColumns={numColumns}
-                key={numColumns}
-                columnWrapperStyle={styles.productRow}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                  <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-                }
-              />
-            </>
-          )}
+          <>
+            <Text style={styles.sectionTitle}>
+              {/* {filteredProducts.length} produit(s) trouvé(s) */}
+            </Text>
+            <FlatList
+              data={filteredProducts}
+              renderItem={renderProduct}
+              keyExtractor={(item) => item.id}
+              numColumns={numColumns}
+              key={numColumns}
+              columnWrapperStyle={styles.productRow}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+              }
+            />
+          </>
         </View>
       </Animated.View>
 
@@ -302,19 +324,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   filterContainer: {
-    flexDirection: 'row',  // Aligne les filtres horizontalement
-    alignItems: 'center',  // Centre verticalement
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 4,
-    marginTop: -320, // Réduire cette valeur si nécessaire
+    marginTop: -320,
   },
   filterButton: {
-    paddingVertical: 4, // Réduit de 6 à 4
-    paddingHorizontal: 10, // Réduit de 12 à 10
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     backgroundColor: '#fff',
-    borderRadius: 6, // Réduit de 8 à 6 pour un look plus compact
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minWidth: 60, // Réduit de 70 à 60
+    minWidth: 60,
     alignItems: 'center',
     marginRight: 8,
   },
@@ -325,12 +347,12 @@ const styles = StyleSheet.create({
   filterText: {
     color: '#111827',
     fontWeight: '600',
-    fontSize: 14, // Réduit de 14 à 12
+    fontSize: 14,
   },
   activeFilterText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 12, // Réduit de 14 à 12
+    fontSize: 12,
   },
   section: {
     flex: 1,
@@ -403,11 +425,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 20,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff', // Fond blanc comme demandé
+  },
+  loadingAnimation: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   loadingText: {
-    textAlign: 'center',
-    color: '#6B7280',
+    marginTop: 10,
     fontSize: 16,
-    marginTop: 20,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 });
 

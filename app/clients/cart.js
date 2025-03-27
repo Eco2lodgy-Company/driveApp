@@ -1,5 +1,4 @@
-// PanierScreen.js
-import React, { useState, useEffect,useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,20 +10,22 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  Animated, // Ajouté pour l'animation
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {AuthContext} from "../../AuthContext";
+
 const PanierScreen = () => {
   const [articles, setArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [orderStatus, setOrderStatus] = useState(null);
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
-  const [imgUrl,setImgUrl] = useState('');
+  const [imgUrl, setImgUrl] = useState('');
   const [userId, setUserId] = useState(null);
   const router = useRouter();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current; // Ajouté pour l'animation
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
@@ -48,6 +49,7 @@ const PanierScreen = () => {
         const { token, email, id } = JSON.parse(userToken);
         setToken(token);
         setUserId(id);
+        setUserEmail(email);
 
         if (id && token) {
           fetchCartData(id, token);
@@ -58,6 +60,15 @@ const PanierScreen = () => {
     };
 
     fetchUserData();
+  }, []);
+
+  // Animation au montage
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const fetchCartData = async (userId, token) => {
@@ -173,8 +184,24 @@ const PanierScreen = () => {
   if (isLoading && articles.length === 0) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <View style={styles.container}>
-          <ActivityIndicator size="large" color="#38A169" />
+        <View style={styles.loadingContainer}>
+          <Animated.View
+            style={[
+              styles.loadingAnimation,
+              {
+                opacity: fadeAnim,
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <ActivityIndicator size="large" color="#38A169" />
+            <Text style={styles.loadingText}>Chargement du panier...</Text>
+          </Animated.View>
         </View>
       </SafeAreaView>
     );
@@ -424,6 +451,29 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     marginTop: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff', // Fond blanc comme demandé
+  },
+  loadingAnimation: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
 });
 

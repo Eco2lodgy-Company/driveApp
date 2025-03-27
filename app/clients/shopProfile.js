@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Linking,
   useWindowDimensions,
-  ActivityIndicator 
+  ActivityIndicator,
+  Animated, // Ajouté pour l'animation
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -28,6 +29,7 @@ const ShopScreen = () => {
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
   const { shopId } = useLocalSearchParams();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current; // Ajouté pour l'animation
 
   const convertShopsPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
@@ -65,7 +67,7 @@ const ShopScreen = () => {
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   useEffect(() => {
     if (!shopId || !token || !userEmail) return;
@@ -111,6 +113,15 @@ const ShopScreen = () => {
 
     fetchShopData();
   }, [shopId, token, userEmail]);
+
+  // Animation au montage
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const numColumns = Math.floor(width / 180);
   const cardWidth = width / numColumns - 20;
@@ -173,9 +184,25 @@ const ShopScreen = () => {
 
   if (!shopId || isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: '#fff' }]}>
+      <View style={styles.loadingContainer}>
         {isLoading ? (
-          <ActivityIndicator size="large" color="#2ecc71" />
+          <Animated.View
+            style={[
+              styles.loadingAnimation,
+              {
+                opacity: fadeAnim,
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <ActivityIndicator size="large" color="#2ecc71" />
+            <Text style={styles.loadingText}>Chargement de la boutique...</Text>
+          </Animated.View>
         ) : (
           <Text>ID de boutique manquant</Text>
         )}
@@ -198,37 +225,37 @@ const ShopScreen = () => {
         contentContainerStyle={{ paddingBottom: height * 0.05 }}
       >
         <Image 
-          source={{ uri: convertShopsPathToUrl(shopData.bannerPath) }} 
+          source={{ uri: convertShopsPathToUrl(shopData?.bannerPath) }} 
           style={[styles.banner, { height: height * 0.25 }]}
           resizeMode="cover"
         />
 
         <View style={[styles.infoContainer, { padding: width * 0.04 }]}>
           <Text style={[styles.shopName, { fontSize: width > 600 ? 28 : 24 }]}>
-            {shopData.nom}
+            {shopData?.nom}
           </Text>
           <View style={styles.ratingContainer}>{renderRating()}</View>
           <Text 
             style={[styles.shopDescription, { fontSize: width > 600 ? 18 : 16 }]}
           >
-            {shopData.description}
+            {shopData?.description}
           </Text>
           <TouchableOpacity 
             style={styles.contactInfo}
-            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData.adresse)}`)}
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData?.adresse)}`)}
           >
             <Ionicons name="location-outline" size={width > 600 ? 24 : 20} color="#666" />
             <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-              {shopData.adresse}
+              {shopData?.adresse}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.contactInfo}
-            onPress={() => Linking.openURL(`tel:${shopData.telephone}`)}
+            onPress={() => Linking.openURL(`tel:${shopData?.telephone}`)}
           >
             <Ionicons name="call-outline" size={width > 600 ? 24 : 20} color="#666" />
             <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-              {shopData.telephone}
+              {shopData?.telephone}
             </Text>
           </TouchableOpacity>
         </View>
@@ -373,7 +400,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff', // Fond blanc pour le chargement
+    backgroundColor: '#fff', // Fond blanc comme demandé
+  },
+  loadingAnimation: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
 });
 

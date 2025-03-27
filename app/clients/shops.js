@@ -10,6 +10,7 @@ import {
   Animated,
   useWindowDimensions,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -195,7 +196,25 @@ const ShopsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <View style={styles.loadingContainer}>
+          <Animated.View
+            style={[
+              styles.loadingAnimation,
+              {
+                opacity: fadeAnim,
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <ActivityIndicator size="large" color="#2ecc71" />
+            <Text style={styles.loadingText}>Chargement des boutiques...</Text>
+          </Animated.View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -390,12 +409,28 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 80,
   },
-  loadingText: {
+  loadingContainer: {
     flex: 1,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontSize: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingAnimation: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
     color: '#666',
+    fontWeight: '500',
   },
   errorText: {
     flex: 1,
