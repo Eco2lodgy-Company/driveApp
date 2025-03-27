@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -9,122 +9,119 @@ import {
   TouchableOpacity,
   Linking,
   useWindowDimensions,
+  ActivityIndicator 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import BottomNavigation from './components/BottomNavigation';
 
 const ShopScreen = () => {
   const [shopData, setShopData] = useState(null);
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("Tous");
   const [categories, setCategories] = useState(["Tous"]);
+  const [isLoading, setIsLoading] = useState(true);
   const { width, height } = useWindowDimensions();
   const [token, setToken] = useState("");
   const [userId, setUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
-  const { shopId } = useLocalSearchParams(); // Récupération de l'ID depuis l'URL
+  const { shopId } = useLocalSearchParams();
 
-  //fonction pour convertir l'URL brute des image en URL pour acceder aux images depuis le serveur
   const convertShopsPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
       console.error("Chemin invalide:", dbPath);
-      return ""; // Image par défaut
+      return "";
     }
     const basePath = "/root/data/drive/shop/";
     const baseUrl = "http://alphatek.fr:8084/";
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
 
-
   const convertProductsPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
       console.error("Chemin invalide:", dbPath);
-      return ""; // Image par défaut
+      return "";
     }
     const basePath = "/root/data/drive/products/";
     const baseUrl = "http://alphatek.fr:8086/";
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
 
-
-
-const fetchUserData = useCallback(async () => {
-  try {
-    const userToken = await AsyncStorage.getItem("user");
-    if (!userToken) throw new Error("Aucun token trouvé");
-
-    const { token, email, id } = JSON.parse(userToken);
-    setToken(token);
-    setUserId(id);
-    setUserEmail(email);
-  } catch (error) {
-    console.error("Erreur lors de la récupération du token :", error.message);
-  }
-}, []);
-
-useEffect(() => {
-  fetchUserData(); // Exécuter au montage pour charger les données utilisateur
-}, []);
-
-useEffect(() => {
-  if (!shopId || !token || !userEmail) return; // Vérifie que toutes les données sont disponibles
-
-  const fetchShopData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
-      //console.log(token,userEmail);
-      const shopResponse = await fetch(`http://195.35.24.128:8081/api/shop/find/${shopId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const shopResult = await shopResponse.json();
-      if (shopResult.status === "success") {
-        setShopData(shopResult.data);
-      }
+      const userToken = await AsyncStorage.getItem("user");
+      if (!userToken) throw new Error("Aucun token trouvé");
 
-      const productsResponse = await fetch(
-        `http://195.35.24.128:8081/api/products/findByShop/${shopId}?username=${userEmail}`,
-        {
+      const { token, email, id } = JSON.parse(userToken);
+      setToken(token);
+      setUserId(id);
+      setUserEmail(email);
+    } catch (error) {
+      console.error("Erreur lors de la récupération du token :", error.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    if (!shopId || !token || !userEmail) return;
+
+    const fetchShopData = async () => {
+      try {
+        setIsLoading(true);
+        const shopResponse = await fetch(`http://195.35.24.128:8081/api/shop/find/${shopId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+        });
+        const shopResult = await shopResponse.json();
+        if (shopResult.status === "success") {
+          setShopData(shopResult.data);
         }
-      );
-      const productsResult = await productsResponse.json();
-      if (productsResult.status === "success") {
-        setProducts(productsResult.data);
-        const uniqueCategories = [
-          "Tous",
-          ...new Set(productsResult.data.map(product => product.categorieIntitule))
-        ];
-        setCategories(uniqueCategories);
+
+        const productsResponse = await fetch(
+          `http://195.35.24.128:8081/api/products/findByShop/${shopId}?username=${userEmail}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const productsResult = await productsResponse.json();
+        if (productsResult.status === "success") {
+          setProducts(productsResult.data);
+          const uniqueCategories = [
+            "Tous",
+            ...new Set(productsResult.data.map(product => product.categorieIntitule))
+          ];
+          setCategories(uniqueCategories);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des données:', error);
-    }
-  };
+    };
 
-  fetchShopData();
-}, [shopId, token, userEmail]); // Ajout de `token` et `userEmail` dans les dépendances
+    fetchShopData();
+  }, [shopId, token, userEmail]);
 
-
-  // Calculs pour la grille responsive
   const numColumns = Math.floor(width / 180);
   const cardWidth = width / numColumns - 20;
 
-  // Filtrer les produits
   const filteredProducts = selectedCategory === "Tous"
     ? products
     : products.filter(product => product.categorieIntitule === selectedCategory);
 
-  // Afficher les étoiles (par défaut à 4.5 car pas dans l'API)
   const renderRating = () => {
     const stars = [];
-    const rating = 4.5; // Valeur par défaut
+    const rating = 4.5;
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <Ionicons
@@ -138,7 +135,6 @@ useEffect(() => {
     return stars;
   };
 
-  // Rendu des produits
   const renderProduct = ({ item }) => (
     <TouchableOpacity 
       style={[styles.productCard, { width: cardWidth }]}
@@ -154,7 +150,6 @@ useEffect(() => {
     </TouchableOpacity>
   );
 
-  // Rendu des catégories
   const renderCategory = (category) => (
     <TouchableOpacity
       style={[
@@ -176,90 +171,116 @@ useEffect(() => {
     </TouchableOpacity>
   );
 
-  // Chargement en cours ou ID manquant
-  if (!shopId || !shopData) {
+  if (!shopId || isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>{!shopId ? "ID de boutique manquant" : "Chargement..."}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: '#fff' }]}>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#2ecc71" />
+        ) : (
+          <Text>ID de boutique manquant</Text>
+        )}
       </View>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: height * 0.05 }}
-    >
-      {/* Bannière */}
-      <Image 
-        source={{ uri: convertShopsPathToUrl(shopData.bannerPath) }} 
-        style={[styles.banner, { height: height * 0.25 }]}
-        resizeMode="cover"
-      />
-
-      {/* Informations */}
-      <View style={[styles.infoContainer, { padding: width * 0.04 }]}>
-        <Text style={[styles.shopName, { fontSize: width > 600 ? 28 : 24 }]}>
-          {shopData.nom}
-        </Text>
-        <View style={styles.ratingContainer}>{renderRating()}</View>
-        <Text 
-          style={[styles.shopDescription, { fontSize: width > 600 ? 18 : 16 }]}
-        >
-          {shopData.description}
-        </Text>
+    <View style={styles.mainContainer}>
+      <View style={styles.header}>
         <TouchableOpacity 
-          style={styles.contactInfo}
-          onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData.adresse)}`)}
+          style={styles.backButton}
+          onPress={() => router.back()}
         >
-          <Ionicons name="location-outline" size={width > 600 ? 24 : 20} color="#666" />
-          <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-            {shopData.adresse}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.contactInfo}
-          onPress={() => Linking.openURL(`tel:${shopData.telephone}`)}
-        >
-          <Ionicons name="call-outline" size={width > 600 ? 24 : 20} color="#666" />
-          <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
-            {shopData.telephone}
-          </Text>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-
-      {/* Catégories */}
-      <View style={[styles.categoriesContainer, { paddingHorizontal: width * 0.04 }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {categories.map(category => (
-            <View key={category}>
-              {renderCategory(category)}
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Catalogue */}
-      <View style={[styles.productsContainer, { padding: width * 0.04 }]}>
-        <Text style={[styles.productsTitle, { fontSize: width > 600 ? 24 : 20 }]}>
-          Catalogue
-        </Text>
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderProduct}
-          keyExtractor={item => item.id.toString()}
-          numColumns={numColumns}
-          key={numColumns}
-          columnWrapperStyle={styles.productRow}
-          scrollEnabled={false}
-          ListEmptyComponent={<Text style={styles.emptyText}>Aucun produit dans cette catégorie</Text>}
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: height * 0.05 }}
+      >
+        <Image 
+          source={{ uri: convertShopsPathToUrl(shopData.bannerPath) }} 
+          style={[styles.banner, { height: height * 0.25 }]}
+          resizeMode="cover"
         />
-      </View>
-    </ScrollView>
+
+        <View style={[styles.infoContainer, { padding: width * 0.04 }]}>
+          <Text style={[styles.shopName, { fontSize: width > 600 ? 28 : 24 }]}>
+            {shopData.nom}
+          </Text>
+          <View style={styles.ratingContainer}>{renderRating()}</View>
+          <Text 
+            style={[styles.shopDescription, { fontSize: width > 600 ? 18 : 16 }]}
+          >
+            {shopData.description}
+          </Text>
+          <TouchableOpacity 
+            style={styles.contactInfo}
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopData.adresse)}`)}
+          >
+            <Ionicons name="location-outline" size={width > 600 ? 24 : 20} color="#666" />
+            <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
+              {shopData.adresse}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.contactInfo}
+            onPress={() => Linking.openURL(`tel:${shopData.telephone}`)}
+          >
+            <Ionicons name="call-outline" size={width > 600 ? 24 : 20} color="#666" />
+            <Text style={[styles.contactText, { fontSize: width > 600 ? 16 : 14 }]}>
+              {shopData.telephone}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.categoriesContainer, { paddingHorizontal: width * 0.04 }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {categories.map(category => (
+              <View key={category}>
+                {renderCategory(category)}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={[styles.productsContainer, { padding: width * 0.04 }]}>
+          <Text style={[styles.productsTitle, { fontSize: width > 600 ? 24 : 20 }]}>
+            Catalogue
+          </Text>
+          <FlatList
+            data={filteredProducts}
+            renderItem={renderProduct}
+            keyExtractor={item => item.id.toString()}
+            numColumns={numColumns}
+            key={numColumns}
+            columnWrapperStyle={styles.productRow}
+            scrollEnabled={false}
+            ListEmptyComponent={<Text style={styles.emptyText}>Aucun produit dans cette catégorie</Text>}
+          />
+        </View>
+      </ScrollView>
+      <BottomNavigation />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    position: 'absolute',
+    top: 40,
+    left: 10,
+    zIndex: 1,
+  },
+  backButton: {
+    backgroundColor: '#2ecc71',
+    padding: 8,
+    borderRadius: 50,
+    elevation: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -352,6 +373,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff', // Fond blanc pour le chargement
   },
 });
 
