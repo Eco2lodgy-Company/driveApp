@@ -192,7 +192,7 @@ useEffect(() => {
     >
       {/* Bannière */}
       <Image 
-        source={{ uri: `http://195.35.24.128:8081${shopData.bannerPath}` }} 
+        source={{ uri: convertShopsPathToUrl(shopData.bannerPath) }} 
         style={[styles.banner, { height: height * 0.25 }]}
         resizeMode="cover"
       />
