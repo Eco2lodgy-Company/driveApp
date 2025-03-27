@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter, usePathname } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BottomNavigation = () => {
   const router = useRouter();
   const pathname = usePathname();
-
-  // Nombre d'articles dans le panier (simulé, peut venir d'un contexte global)
-  const [cartCount, setCartCount] = useState(1); // Exemple : 3 articles dans le panier
+  const [token, setToken] = useState(null); // État pour le token de l'utilisateur
+  const [userId, setUserId] = useState(null); // État pour l'ID de l'utilisateur
+  const [userEmail, setUserEmail] = useState(null); // État pour l'email de l'utilisateur
+  const [cartCount, setCartCount] = useState(0); // Nombre de paniers
 
   const navItems = [
     { icon: 'home', text: 'Home', path: '/clients/home' },
@@ -18,6 +20,68 @@ const BottomNavigation = () => {
   ];
 
   const [animations] = useState(navItems.map(() => new Animated.Value(1)));
+
+  // Récupérer les données utilisateur (token, ID, email) depuis AsyncStorage
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem("user");
+        if (!userToken) {
+          console.error("Aucun token trouvé");
+          return;
+        }
+  
+        const { token, email, id } = JSON.parse(userToken);
+        setToken(token);
+        setUserId(id);
+        setUserEmail(email);
+      } catch (error) {
+        console.error("Erreur lors de la récupération du token :", error.message);
+      }
+    };
+  
+    fetchUserData();
+  }, []);
+
+  // Fonction pour récupérer les données du panier
+  const fetchCartData = useCallback(async () => {
+    if (!userId || !token) return;
+  
+    try {
+      const response = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+  
+      const result = await response.json();
+  
+      if (result.status === "success" && result.data) {
+        // Compter le nombre de paniers (éléments dans result.data)
+        const totalPaniers = result.data.length;
+        setCartCount(totalPaniers);
+      } else {
+        console.error("Erreur dans la réponse de l'API:", result.message);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données du panier:", error);
+    }
+  }, [userId, token]);
+
+  // Mise à jour périodique des données du panier
+  useEffect(() => {
+    fetchCartData(); // Appel initial
+
+    // Mettre à jour toutes les 5 secondes (ou ajuste selon tes besoins)
+    const interval = setInterval(() => {
+      fetchCartData();
+    }, 5000); // 5000ms = 5 secondes
+
+    // Nettoyer l'intervalle quand le composant est démonté
+    return () => clearInterval(interval);
+  }, [fetchCartData]);
 
   const handlePressIn = (index) => {
     Animated.spring(animations[index], {
@@ -147,7 +211,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -10,
-    backgroundColor: '#FFA500', // Couleur orange
+    backgroundColor: '#FFA500',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
