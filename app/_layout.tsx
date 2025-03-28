@@ -34,6 +34,7 @@ export default function RootLayout() {
         <LocationProvider>
           <Stack screenOptions={{ headerShown: false }}>  {/* Ajout ici */}
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="choix" />
             <Stack.Screen name="vendeurs/home" />
             <Stack.Screen name="vendeurs/shopCreationScreen" />
             <Stack.Screen name="vendeurs/profile" />

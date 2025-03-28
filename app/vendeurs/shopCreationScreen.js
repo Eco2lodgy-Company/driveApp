@@ -1,30 +1,27 @@
-import React, { useState, useEffect,useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { StyleSheet, Platform, StatusBar, View, Image, Alert } from 'react-native';
+import * as eva from '@eva-design/eva';
 import {
-  View,
+  ApplicationProvider,
+  Layout,
   Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-} from 'react-native';
+  Input,
+  Button,
+  Spinner,
+} from '@ui-kitten/components';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Feather';
 import { AuthContext } from '../../AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system'; // Ajout de la bibliothèque pour gérer les fichiers
+import * as FileSystem from 'expo-file-system';
 
 const ShopCreationScreen = () => {
   const router = useRouter();
   const [userGetData, setUserGetData] = useState(null);
   const [loginSessionData, setLoginSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-const {login} = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [shopData, setShopData] = useState({
     email: '',
     nom: '',
@@ -134,7 +131,6 @@ const {login} = useContext(AuthContext);
       shopBanner,
     } = shopData;
 
-    // Validation des champs obligatoires
     if (!shopNom || !shopDescription || !shopTelephone || !email || !shopAdresse || !shopBanner) {
       console.log('Champs manquants :', { shopNom, shopDescription, shopTelephone, email, shopAdresse, shopBanner });
       Alert.alert('Erreur', 'Veuillez remplir tous les champs et uploader une bannière.');
@@ -152,7 +148,7 @@ const {login} = useContext(AuthContext);
     }
 
     setIsLoading(true);
-    let tempFileUri = null; // Variable pour stocker l'URI du fichier temporaire
+    let tempFileUri = null;
 
     try {
       const formData = new FormData();
@@ -175,21 +171,19 @@ const {login} = useContext(AuthContext);
 
       if (shopBanner) {
         let fileUri;
-        let filename = 'shopBanner.png'; // Nom par défaut
-        let type = 'image/png'; // Type par défaut
+        let filename = 'shopBanner.png';
+        let type = 'image/png';
 
         if (shopBanner.startsWith('data:image')) {
-          // Cas 1 : Chaîne base64 -> Conversion en fichier
-          const base64Data = shopBanner.split(',')[1]; // Extrait la partie base64
+          const base64Data = shopBanner.split(',')[1];
           fileUri = `${FileSystem.documentDirectory}shopBanner.png`;
           await FileSystem.writeAsStringAsync(fileUri, base64Data, {
             encoding: FileSystem.EncodingType.Base64,
           });
-          type = shopBanner.split(';')[0].split(':')[1]; // Ex. "image/png"
-          tempFileUri = fileUri; // Stocke pour suppression ultérieure
+          type = shopBanner.split(';')[0].split(':')[1];
+          tempFileUri = fileUri;
           console.log('Base64 converti en fichier :', { uri: fileUri, name: filename, type });
         } else if (shopBanner.startsWith('file://') || shopBanner.startsWith('content://')) {
-          // Cas 2 : URI de fichier (ImagePicker)
           fileUri = shopBanner;
           filename = fileUri.split('/').pop();
           const match = /\.(\w+)$/.exec(filename);
@@ -197,7 +191,6 @@ const {login} = useContext(AuthContext);
           console.log('Fichier directement utilisé :', { uri: fileUri, name: filename, type });
         }
 
-        // Ajout du fichier au FormData
         formData.append('shopBanner', {
           uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
           name: filename,
@@ -205,7 +198,6 @@ const {login} = useContext(AuthContext);
         });
       }
 
-      // Log complet des données envoyées
       console.log('Données envoyées au serveur :', {
         email,
         nom,
@@ -259,21 +251,17 @@ const {login} = useContext(AuthContext);
       console.log('Résultat parsé :', result);
       Alert.alert('Succès', 'Boutique créée avec succès !');
       console.log('Tentative de redirection vers /Vendeurs/home');
-      //login(formData.email, formData.password);
-        const Loginresponse = await login(formData.email, formData);
-        if (Loginresponse?.message) {
-          Alert.alert(Loginresponse.message);
-        }else{
-          router.push('/vendeurs/home');
-        }
-
-      
+      const Loginresponse = await login(formData.email, formData);
+      if (Loginresponse?.message) {
+        Alert.alert(Loginresponse.message);
+      } else {
+        router.push('/vendeurs/home');
+      }
     } catch (error) {
       console.error('Erreur dans handleCreateShop :', error);
       Alert.alert('Erreur', error.message || 'Échec de la création de la boutique.');
     } finally {
       setIsLoading(false);
-      // Nettoyage du fichier temporaire si créé
       if (tempFileUri) {
         await FileSystem.deleteAsync(tempFileUri).catch((err) =>
           console.log('Erreur lors de la suppression du fichier temporaire :', err)
@@ -283,198 +271,203 @@ const {login} = useContext(AuthContext);
   };
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Créer une boutique</Text>
-          <Text style={styles.subtitle}>Configurez votre espace de vente</Text>
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Icon name="shopping-bag" size={20} color="#38A169" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={shopData.shopNom}
-                onChangeText={(text) => handleChange('shopNom', text)}
-                placeholder="Nom de la boutique"
-                placeholderTextColor="#A0A0A0"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Icon name="edit-2" size={20} color="#38A169" style={styles.icon} />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={shopData.shopDescription}
-                onChangeText={(text) => handleChange('shopDescription', text)}
-                placeholder="Description de la boutique"
-                placeholderTextColor="#A0A0A0"
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Icon name="phone" size={20} color="#38A169" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={shopData.shopTelephone}
-                onChangeText={(text) => handleChange('shopTelephone', text)}
-                placeholder="Numéro de téléphone"
-                placeholderTextColor="#A0A0A0"
-                keyboardType="phone-pad"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Icon name="mail" size={20} color="#38A169" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={shopData.email}
-                onChangeText={(text) => handleChange('email', text)}
-                placeholder="Email de la boutique"
-                placeholderTextColor="#A0A0A0"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Icon name="map-pin" size={20} color="#38A169" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={shopData.shopAdresse}
-                onChangeText={(text) => handleChange('shopAdresse', text)}
-                placeholder="Adresse de la boutique"
-                placeholderTextColor="#A0A0A0"
-              />
-            </View>
-            <Text style={styles.label}>Bannière de la boutique</Text>
-            <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-              <Icon name="image" size={20} color="#fff" style={styles.uploadIcon} />
-              <Text style={styles.uploadButtonText}>
-                {shopData.shopBanner ? 'Changer l’image' : 'Uploader une bannière'}
-              </Text>
-            </TouchableOpacity>
-            {shopData.shopBanner && (
-              <Image source={{ uri: shopData.shopBanner }} style={styles.bannerPreview} resizeMode="cover" />
+    <ApplicationProvider {...eva} theme={eva.light}>
+      <Layout style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+
+        {/* Header */}
+        <Layout style={styles.header} level="1">
+          <Ionicons name="storefront-outline" size={70} color="#38B2AC" />
+          <Text category="h4" style={styles.headerTitle}>
+            Create Your Shop
+          </Text>
+          <Text category="p2" style={styles.headerSubtitle}>
+            Set up your selling space
+          </Text>
+        </Layout>
+
+        {/* Form Container */}
+        <Layout style={styles.formContainer}>
+          {/* Inputs */}
+          <Input
+            style={styles.input}
+            placeholder="Shop Name"
+            value={shopData.shopNom}
+            onChangeText={(text) => handleChange('shopNom', text)}
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="bag-outline" size={24} color="#38B2AC" />
+              </View>
             )}
-            <TouchableOpacity
-              style={[styles.createButton, isLoading && styles.createButtonDisabled]}
-              onPress={handleCreateShop}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.createButtonText}>Créer la boutique</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          />
+          <Input
+            style={[styles.input, styles.textArea]}
+            placeholder="Shop Description"
+            value={shopData.shopDescription}
+            onChangeText={(text) => handleChange('shopDescription', text)}
+            multiline
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="pencil-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+          <Input
+            style={styles.input}
+            placeholder="Shop Phone Number"
+            value={shopData.shopTelephone}
+            onChangeText={(text) => handleChange('shopTelephone', text)}
+            keyboardType="phone-pad"
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="call-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+          <Input
+            style={styles.input}
+            placeholder="Shop Email"
+            value={shopData.email}
+            onChangeText={(text) => handleChange('email', text)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="mail-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+          <Input
+            style={styles.input}
+            placeholder="Shop Address"
+            value={shopData.shopAdresse}
+            onChangeText={(text) => handleChange('shopAdresse', text)}
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="location-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+
+          {/* Upload Banner */}
+          <Button
+            style={styles.uploadButton}
+            onPress={pickImage}
+            accessoryLeft={() => <Ionicons name="image-outline" size={24} color="#FFFFFF" />}
+          >
+            {shopData.shopBanner ? 'Change Shop Banner' : 'Upload Shop Banner'}
+          </Button>
+          {shopData.shopBanner && (
+            <Image source={{ uri: shopData.shopBanner }} style={styles.bannerPreview} resizeMode="cover" />
+          )}
+
+          {/* Create Button */}
+          <Button
+            style={styles.createButton}
+            onPress={handleCreateShop}
+            disabled={isLoading}
+            accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
+          >
+            {!isLoading && 'CREATE SHOP'}
+          </Button>
+        </Layout>
+      </Layout>
+    </ApplicationProvider>
   );
 };
 
-// Les styles restent inchangés
 const styles = StyleSheet.create({
-  safeContainer: {
-    flex: 1,
-    backgroundColor: '#F7F8FA',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
   container: {
     flex: 1,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-    textAlign: 'left',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-    textAlign: 'left',
-  },
-  form: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  inputContainer: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F6F8',
-    borderRadius: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#EDEFF2',
+    paddingVertical: 40,
+    backgroundColor: '#FFFFFF',
   },
-  icon: {
-    marginLeft: 12,
-    marginRight: 8,
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+    backgroundColor: 'transparent',
+  },
+  headerTitle: {
+    color: '#2D3748',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 8,
+  },
+  headerSubtitle: {
+    color: '#718096',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  formContainer: {
+    backgroundColor: 'transparent',
+    width: '90%',
+    maxWidth: 400,
   },
   input: {
-    flex: 1,
-    padding: 14,
-    fontSize: 16,
-    color: '#1A1A1A',
+    marginBottom: 20,
+    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F7FAFC',
+    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
   },
   textArea: {
-    height: 100,
+    height: 150, // Agrandi pour plus de confort
     textAlignVertical: 'top',
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+  inputText: {
+    fontSize: 16,
+    color: '#2D3748',
   },
-  uploadButton: {
-    flexDirection: 'row',
-    backgroundColor: '#38A169',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  uploadIcon: {
+  iconContainer: {
     marginRight: 8,
   },
-  uploadButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  uploadButton: {
+    backgroundColor: '#38B2AC',
+    borderColor: '#38B2AC',
+    borderRadius: 12,
+    paddingVertical: 14,
+    height: 56, // Bouton plus grand pour une meilleure ergonomie
+    marginBottom: 20,
+    shadowColor: '#38B2AC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   bannerPreview: {
     width: '100%',
-    height: 150,
-    borderRadius: 10,
+    height: 200, // Agrandi pour une meilleure visibilité
+    borderRadius: 12,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#EDEFF2',
+    borderWidth: 2, // Bordure plus visible
+    borderColor: '#38B2AC', // Bordure turquoise pour cohérence
   },
   createButton: {
-    backgroundColor: '#38A169',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  createButtonDisabled: {
-    backgroundColor: '#95C9A6',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    backgroundColor: '#38B2AC',
+    borderColor: '#38B2AC',
+    borderRadius: 10,
+    paddingVertical: 12,
+    height: 50,
+    shadowColor: '#38B2AC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
 
