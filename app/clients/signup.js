@@ -1,6 +1,6 @@
-import React, { useContext, useState, useRef, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Platform, StatusBar, View } from 'react-native';
+import { StyleSheet, StatusBar, View } from 'react-native';
 import * as eva from '@eva-design/eva';
 import {
   ApplicationProvider,
@@ -12,25 +12,22 @@ import {
 } from '@ui-kitten/components';
 import { Ionicons } from '@expo/vector-icons';
 import { LocationContext } from "../../LocationContext";
-import { AuthContext } from '../../AuthContext';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const SellerSignupScreen = () => {
+const userSignupScreen = () => {
   const router = useRouter();
   const { location } = useContext(LocationContext);
-  const { login } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
-    name: '',
-    prenom: '',
-    phone: '',
-    adress: '',
     email: '',
-    userLat: null,
-    userLong: location ? location.longitude : null,
-    role: 'Vendeur',
+    nom: '',
+    prenom: '',
+    telephone: '',
+    adresse: '',
+    role: 'Client', // Changé de 'Vendeur' à 'Client'
     password: '',
     confirmPassword: '',
+    longitude: location ? location.longitude : null,
+    latitude: location ? location.latitude : null,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,8 +37,8 @@ const SellerSignupScreen = () => {
     if (location) {
       setFormData((prevData) => ({
         ...prevData,
-        userLat: location.latitude,
-        userLong: location.longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
       }));
     }
   }, [location]);
@@ -59,16 +56,42 @@ const SellerSignupScreen = () => {
     setSuccess('');
 
     try {
-      // Simuler une validation ou une API call ici si nécessaire
       if (formData.password !== formData.confirmPassword) {
         setError("Les mots de passe ne correspondent pas");
-      } else {
-        await AsyncStorage.setItem("userDetails", JSON.stringify(formData));
-        setSuccess("Inscription réussie ! Redirection en cours...");
-        setTimeout(() => {
-          router.push('/vendeurs/shopCreationScreen');
-        }, 2000);
+        setIsLoading(false);
+        return;
       }
+
+      const dataToSend = {
+        email: formData.email,
+        nom: formData.nom,
+        prenom: formData.prenom,
+        telephone: formData.telephone,
+        adresse: formData.adresse,
+        role: formData.role,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        longitude: formData.longitude,
+        latitude: formData.latitude,
+      };
+
+      const response = await fetch('http://195.35.24.128:8081/api/user/new', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création du compte');
+      }
+
+      setSuccess("Inscription réussie ! Redirection en cours...");
+      setTimeout(() => {
+        router.push('/clients/home'); // Redirection adaptée pour un client
+      }, 2000);
+
     } catch (error) {
       setError("Une erreur est survenue lors de l'inscription");
       console.error("Erreur d'inscription :", error);
@@ -84,12 +107,12 @@ const SellerSignupScreen = () => {
 
         {/* Header */}
         <Layout style={styles.header} level="1">
-          <Ionicons name="storefront-outline" size={70} color="#38B2AC" />
+          <Ionicons name="person-add-outline" size={70} color="#38B2AC" /> {/* Icône changée */}
           <Text category="h4" style={styles.headerTitle}>
-            Sign Up as Seller
+            Sign Up as Client
           </Text>
           <Text category="p2" style={styles.headerSubtitle}>
-            Start selling today!
+            Join us today!
           </Text>
         </Layout>
 
@@ -109,9 +132,24 @@ const SellerSignupScreen = () => {
           {/* Inputs */}
           <Input
             style={styles.input}
+            placeholder="Email Address"
+            value={formData.email}
+            onChangeText={(text) => handleChange('email', text)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="mail-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+          <Input
+            style={styles.input}
             placeholder="Last Name"
-            value={formData.name}
-            onChangeText={(text) => handleChange('name', text)}
+            value={formData.nom}
+            onChangeText={(text) => handleChange('nom', text)}
             autoCapitalize="words"
             textStyle={styles.inputText}
             placeholderTextColor="#A0AEC0"
@@ -138,8 +176,8 @@ const SellerSignupScreen = () => {
           <Input
             style={styles.input}
             placeholder="Phone Number"
-            value={formData.phone}
-            onChangeText={(text) => handleChange('phone', text)}
+            value={formData.telephone}
+            onChangeText={(text) => handleChange('telephone', text)}
             keyboardType="phone-pad"
             textStyle={styles.inputText}
             placeholderTextColor="#A0AEC0"
@@ -152,28 +190,13 @@ const SellerSignupScreen = () => {
           <Input
             style={styles.input}
             placeholder="Address"
-            value={formData.adress}
-            onChangeText={(text) => handleChange('adress', text)}
+            value={formData.adresse}
+            onChangeText={(text) => handleChange('adresse', text)}
             textStyle={styles.inputText}
             placeholderTextColor="#A0AEC0"
             accessoryLeft={() => (
               <View style={styles.iconContainer}>
                 <Ionicons name="location-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
-          <Input
-            style={styles.input}
-            placeholder="Email Address"
-            value={formData.email}
-            onChangeText={(text) => handleChange('email', text)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="mail-outline" size={24} color="#38B2AC" />
               </View>
             )}
           />
@@ -304,4 +327,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SellerSignupScreen;
+export default userSignupScreen;

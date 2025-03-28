@@ -14,11 +14,11 @@ const HomeChoiceScreen = () => {
   const router = useRouter();
 
   const handleSellerChoice = () => {
-    router.push('/vendeurs/signup'); // Redirection vers la page d'inscription vendeur
+    router.push('vendeurs/signup'); // Redirection vers la page d'inscription vendeur
   };
 
   const handleBuyerChoice = () => {
-    router.push('/clients/signup'); // Redirection vers la page d'inscription client
+    router.push('clients/signup'); // Redirection vers la page d'inscription client
   };
 
   return (
