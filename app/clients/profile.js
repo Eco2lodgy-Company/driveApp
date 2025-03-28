@@ -1,4 +1,4 @@
-import React,{useContext} from 'react';
+import React, { useContext, useEffect, useState,useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,55 +10,109 @@ import {
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { useRouter } from 'expo-router'; // Pour Expo Router
+import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {AuthContext} from '../../AuthContext'
+import { AuthContext } from '../../AuthContext';
 
 const ProfileScreen = () => {
-  const router = useRouter(); // Navigation avec Expo Router
+  const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-    const { logout } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fonction pour récupérer le token et les données utilisateur
+  const fetchUserData = useCallback(async () => {
+    try {
+      setLoading(true);
   
-
-  // Données fictives de l'utilisateur
-  const user = {
-    name: 'Noor Alami',
-    email: 'noor@example.com',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop',
-    orders: 12,
-    favorites: 8,
-  };
-
-  React.useEffect(() => {
+      // Récupérer le token depuis AsyncStorage
+      const userDataString = await AsyncStorage.getItem("user");
+      if (!userDataString) {
+        console.error("Aucun utilisateur trouvé dans le stockage");
+        return;
+      }
+  
+      const userData = JSON.parse(userDataString);
+      const { token, email } = userData;
+  
+      if (!token || !email) {
+        console.error("Données utilisateur incomplètes");
+        return;
+      }
+  
+      const response = await fetch(
+        `http://195.35.24.128:8081/api/user/findByUsername?email=${email}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        console.error("Erreur API:", response.status, response.statusText);
+        return;
+      }
+  
+      const result = await response.json();
+  
+      if (result?.status === "succes" && result?.data) {
+        console.log(result.data);
+        setUser({
+          name: `${result.data.prenom} ${result.data.nom}`,
+          email: result.data.email,
+          avatar:
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop", // Image par défaut
+          orders: 12, // Valeur fictive (à adapter)
+          favorites: 8, // Valeur fictive (à adapter)
+        });
+      } else {
+        console.error("Réponse API invalide:", result);
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des données utilisateur :",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchUserData();
+  
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 800,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, fetchUserData]);
 
   const handleLogout = async () => {
     try {
-        console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
-        await logout();
-        router.push('/login');
+      console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
+      await logout();
+      router.push('/login');
     } catch (error) {
-        console.error('Erreur lors de la déconnexion :', error);
+      console.error('Erreur lors de la déconnexion :', error);
     }
-};
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>Chargement...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* App Bar */}
-      {/* <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Icon name="arrow-left" size={24} color="#2D3748" />
-        </TouchableOpacity>
-        <Text style={styles.appName}>Profile</Text>
-      </View> */}
-
-      {/* Contenu principal */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Section Avatar et Infos */}
         <Animated.View style={[styles.profileHeader, { opacity: fadeAnim }]}>
@@ -90,7 +144,7 @@ const ProfileScreen = () => {
         <View style={styles.menuContainer}>
           {[
             { icon: 'user', label: 'Edit Profile', action: () => router.push('/clients/ProfileEditScreen') },
-            { icon: 'shopping-cart', label: 'My Orders', action: () =>router.push('/clients/OrdersScreen')  },
+            { icon: 'shopping-cart', label: 'My Orders', action: () => router.push('/clients/OrdersScreen') },
             { icon: 'settings', label: 'Settings', action: () => console.log('Settings') },
             { icon: 'help-circle', label: 'Help & Support', action: () => console.log('Help') },
           ].map((item, index) => (
@@ -118,7 +172,6 @@ const ProfileScreen = () => {
         </TouchableOpacity>
       </ScrollView>
       <BottomNavigation />
-
     </SafeAreaView>
   );
 };
@@ -127,22 +180,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F4F8',
-  },
-  appBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    paddingTop: 40,
-    backgroundColor: '#fff',
-    elevation: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2D3748',
-    marginLeft: 15,
   },
   scrollContent: {
     padding: 20,
