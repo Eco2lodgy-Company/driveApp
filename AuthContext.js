@@ -23,38 +23,41 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`http://195.35.24.128:8081/api/authenticate?username=${email}&password=${password}`, {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json" 
-        },
-       // body: JSON.stringify({ email, password }),
-      });
-
+      const response = await fetch(
+        `http://195.35.24.128:8081/api/authenticate?username=${email}&password=${password}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
       const data = await response.json();
-
-      if (response.ok) {
+  
+      if (response.ok && data?.data?.userInfo) {
         const userData = {
-          id:data.data.userInfo.id,
+          id: data.data.userInfo.id,
           nom: data.data.userInfo.nom,
           prenom: data.data.userInfo.prenom,
           email: data.data.userInfo.email,
-          role : data.data.userInfo.role,
-          token : data.data.token,
-          
+          role: data.data.userInfo.role,
+          token: data.data.token,
         };
-        
+  
         await AsyncStorage.setItem("user", JSON.stringify(userData));
-        
         setUser(userData);
-        
+  
+        return { success: true, user: userData };
       } else {
-        console.error("Erreur de connexion", data.message);
+        return { success: false, message: data?.message || "Identifiants incorrects" };
       }
     } catch (error) {
-      console.error("Erreur lors de la connexion", error);
+      console.error("Erreur lors de la connexion :", error);
+      return { success: false, message: "Une erreur est survenue" };
     }
   };
+  
 
   const userDetail = async (userData) =>{
 

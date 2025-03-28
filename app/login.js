@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet, Platform, StatusBar, View } from 'react-native';
 import * as eva from '@eva-design/eva';
 import {
   ApplicationProvider,
@@ -9,14 +9,11 @@ import {
   Input,
   Button,
   Spinner,
-  Card,
 } from '@ui-kitten/components';
-import { EvaIconsPack } from '@ui-kitten/eva-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useWindowDimensions } from 'react-native';
 import { AuthContext } from "../AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ImageBackground } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // Using Ionicons from @expo/vector-icons
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -42,30 +39,26 @@ const LoginScreen = () => {
     setIsLoading(true);
     setError('');
     setSuccess('');
-
+  
     try {
       const response = await login(email, password);
-      
-      if (response?.message) {
+  
+      if (!response.success) {
         setError(response.message);
       } else {
-        const userRole = await getUserData();
-        
-        if (userRole && userRole.role) {
-          setSuccess('Connexion réussie ! Redirection en cours...');
-          
-          setTimeout(() => {
-            if (userRole.role === "Vendeur") {
-              router.push("/vendeurs/home");
-            } else if (userRole.role === "Client") {
-              router.push("/clients/home");
-            } else if (userRole.role === "Livreur") {
-              router.push("/deliverer/home");
-            }
-          }, 2000);
-        } else {
-          setError("Erreur : Identifants incorrects");
-        }
+        const userRole = response.user.role;
+  
+        setSuccess("Connexion réussie ! Redirection en cours...");
+  
+        setTimeout(() => {
+          if (userRole === "Vendeur") {
+            router.push("/vendeurs/home");
+          } else if (userRole === "Client") {
+            router.push("/clients/home");
+          } else if (userRole === "Livreur") {
+            router.push("/deliverer/home");
+          }
+        }, 2000);
       }
     } catch (error) {
       setError("Une erreur est survenue lors de la connexion");
@@ -74,156 +67,175 @@ const LoginScreen = () => {
       setIsLoading(false);
     }
   };
-
+  
+  
   return (
-    <ApplicationProvider {...eva} theme={eva.light} icons={EvaIconsPack}>
-      <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }}
-        style={styles.backgroundImage}
-      >
-        <LinearGradient
-          colors={['rgba(255, 98, 0, 0.9)', 'rgba(255, 140, 0, 0.85)', 'rgba(255, 167, 38, 0.8)']}
-          style={styles.gradient}
-        >
-          <StatusBar barStyle="light-content" />
-          
-          {/* Header */}
-          <Layout style={styles.header} level="1">
-            <Text category="h1" style={styles.headerTitle}>
-              drive.re
+    <ApplicationProvider {...eva} theme={eva.light}>
+      <Layout style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+
+        {/* Header with Logo and Welcome Text */}
+        <Layout style={styles.header} level="1">
+          <Ionicons name="cart-outline" size={70} color="#38B2AC" />
+          <Text category="h4" style={styles.headerTitle}>
+            Sign In
+          </Text>
+          <Text category="p2" style={styles.headerSubtitle}>
+            Let’s get started!
+          </Text>
+        </Layout>
+
+        {/* Form Container */}
+        <Layout style={styles.formContainer}>
+          {error ? (
+            <Text category="p1" status="danger" style={styles.message}>
+              {error}
             </Text>
-            <Text category="p2" appearance="hint" style={styles.headerSubtitle}>
-              Shopping nouvelle génération
+          ) : null}
+          {success ? (
+            <Text category="p1" status="success" style={styles.message}>
+              {success}
+            </Text>
+          ) : null}
+
+          {/* Inputs */}
+          <Input
+            style={styles.input}
+            placeholder="Email Address"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="mail-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+          <Input
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            textStyle={styles.inputText}
+            placeholderTextColor="#A0AEC0"
+            accessoryLeft={() => (
+              <View style={styles.iconContainer}>
+                <Ionicons name="lock-closed-outline" size={24} color="#38B2AC" />
+              </View>
+            )}
+          />
+
+          {/* Forgot Password */}
+          <Button
+            appearance="ghost"
+            status="primary"
+            style={styles.forgotButton}
+            onPress={() => {} /* Ajoute ici la logique pour mot de passe oublié */}
+          >
+            Forgot Password?
+          </Button>
+
+          {/* Login Button */}
+          <Button
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={isLoading}
+            accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
+          >
+            {!isLoading && 'SIGN IN'}
+          </Button>
+
+          {/* Signup Link */}
+          <Layout style={styles.signupContainer}>
+            <Text category="p2" appearance="hint">
+              Don’t have an account?{' '}
+              <Text
+                category="p2"
+                status="primary"
+                onPress={() => {} /* Ajoute ici la navigation vers l'inscription */}
+              >
+                Sign Up
+              </Text>
             </Text>
           </Layout>
-
-          {/* Form Container */}
-          <Card style={styles.formContainer}>
-            {error ? (
-              <Text category="p1" status="danger" style={styles.message}>
-                {error}
-              </Text>
-            ) : null}
-            {success ? (
-              <Text category="p1" status="success" style={styles.message}>
-                {success}
-              </Text>
-            ) : null}
-
-            {/* Inputs */}
-            <Input
-              style={styles.input}
-              placeholder="Adresse email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Input
-              style={styles.input}
-              placeholder="Mot de passe"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-
-            {/* Forgot Password */}
-            <Button
-              appearance="ghost"
-              status="primary"
-              style={styles.forgotButton}
-              onPress={() => {} /* Ajoute ici la logique pour mot de passe oublié */}
-            >
-              Mot de passe oublié ?
-            </Button>
-
-            {/* Login Button */}
-            <Button
-              style={styles.loginButton}
-              onPress={handleLogin}
-              disabled={isLoading}
-              accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
-            >
-              {!isLoading && 'Connexion'}
-            </Button>
-
-            {/* Signup Link */}
-            <Layout style={styles.signupContainer}>
-              <Text category="p2" appearance="hint">
-                Nouveau client ?{' '}
-                <Text
-                  category="p2"
-                  status="primary"
-                  onPress={() => {} /* Ajoute ici la navigation vers l'inscription */}
-                >
-                  Créer un compte
-                </Text>
-              </Text>
-            </Layout>
-          </Card>
-        </LinearGradient>
-      </ImageBackground>
+        </Layout>
+      </Layout>
     </ApplicationProvider>
   );
 };
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
-    marginTop: 64,
+    marginBottom: 40,
     backgroundColor: 'transparent',
   },
   headerTitle: {
-    color: '#fff',
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  headerSubtitle: {
-    color: '#fff',
-    opacity: 0.8,
-    fontStyle: 'italic',
+    color: '#2D3748',
+    fontWeight: '700',
+    letterSpacing: 0.5,
     marginTop: 8,
   },
+  headerSubtitle: {
+    color: '#718096',
+    marginTop: 8,
+    fontSize: 14,
+  },
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: 'transparent',
     width: '90%',
     maxWidth: 400,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#EDEFF2',
   },
   message: {
     textAlign: 'center',
     marginBottom: 16,
   },
   input: {
-    marginBottom: 16,
-    borderRadius: 12,
+    marginBottom: 20,
+    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F7FAFC',
+    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 12, // Ajouté pour augmenter l'espace intérieur verticalement
+    // paddingTop:25,
+    // paddingBottom:25,
+    borderWidth: 1,
+  },
+  inputText: {
+    fontSize: 16,
+    color: '#2D3748',
+  },
+  iconContainer: {
+    marginRight: 8,
   },
   forgotButton: {
     alignSelf: 'flex-end',
     marginBottom: 24,
+    color: '#E53E3E',
   },
   loginButton: {
-    backgroundColor: '#FF6200',
-    borderColor: '#FF6200',
-    borderRadius: 12,
+    backgroundColor: '#38B2AC',
+    borderColor: '#38B2AC',
+    borderRadius: 10,
     paddingVertical: 12,
+    height: 50,
+    shadowColor: '#38B2AC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   signupContainer: {
     alignItems: 'center',
