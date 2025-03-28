@@ -78,10 +78,10 @@ const LoginScreen = () => {
         <Layout style={styles.header} level="1">
           <Ionicons name="cart-outline" size={70} color="#38B2AC" />
           <Text category="h4" style={styles.headerTitle}>
-            Sign In
+            Se connecter
           </Text>
           <Text category="p2" style={styles.headerSubtitle}>
-            Let’s get started!
+            Allez, commencons
           </Text>
         </Layout>
 
@@ -136,7 +136,7 @@ const LoginScreen = () => {
             style={styles.forgotButton}
             onPress={() => {} /* Ajoute ici la logique pour mot de passe oublié */}
           >
-            Forgot Password?
+            mot de passe oublier ?
           </Button>
 
           {/* Login Button */}
@@ -146,19 +146,19 @@ const LoginScreen = () => {
             disabled={isLoading}
             accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
           >
-            {!isLoading && 'SIGN IN'}
+            {!isLoading && 'SE CONNECTER'}
           </Button>
 
           {/* Signup Link */}
           <Layout style={styles.signupContainer}>
             <Text category="p2" appearance="hint">
-              Don’t have an account?{' '}
+              Pas encore de compte ?{' '}
               <Text
                 category="p2"
                 status="primary"
                 onPress={() => {router.push("choix")} /* Ajoute ici la navigation vers l'inscription */}
               >
-                Sign Up
+               S'inscrire
               </Text>
             </Text>
           </Layout>

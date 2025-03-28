@@ -1,255 +1,174 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { StyleSheet, StatusBar, FlatList, View } from 'react-native';
+import * as eva from '@eva-design/eva';
 import {
-  View,
+  ApplicationProvider,
+  Layout,
   Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Animated,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+  Card,
+  Button,
+} from '@ui-kitten/components';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const NotificationsScreen = () => {
   const router = useRouter();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  // Données fictives des notifications
-  const notifications = [
+  // Exemple de données de notifications (vous pouvez les remplacer par une API)
+  const [notifications, setNotifications] = useState([
     {
       id: '1',
-      title: 'Order Shipped',
-      description: 'Your order from Noor Boutique has been shipped!',
-      timestamp: '2 hours ago',
-      icon: 'truck',
+      title: 'Commande Confirmée',
+      description: 'Votre commande #1234 a été confirmée avec succès.',
+      icon: 'checkmark-circle-outline',
+      date: '28 Mars 2025, 14:30',
     },
     {
       id: '2',
-      title: 'New Sale Alert',
-      description: 'Fashion Hub just launched a 20% off sale.',
-      timestamp: '5 hours ago',
-      icon: 'tag',
+      title: 'Nouveau Message',
+      description: 'Vous avez reçu un message de Sophie.',
+      icon: 'chatbubble-outline',
+      date: '28 Mars 2025, 10:15',
     },
     {
       id: '3',
-      title: 'Payment Confirmed',
-      description: 'Payment for your Trendy Wear order was successful.',
-      timestamp: '1 day ago',
-      icon: 'check-circle',
+      title: 'Mise à jour disponible',
+      description: 'Une nouvelle version de l’app est disponible.',
+      icon: 'alert-circle-outline',
+      date: '27 Mars 2025, 09:00',
     },
-    {
-      id: '4',
-      title: 'Profile Updated',
-      description: 'Your profile information has been updated.',
-      timestamp: '2 days ago',
-      icon: 'user',
-    },
-    {
-      id: '5',
-      title: 'Delivery Delayed',
-      description: 'Your Street Style order has been delayed by 1 day.',
-      timestamp: '3 days ago',
-      icon: 'alert-triangle',
-    },
-  ];
+  ]);
 
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
-
-  const handleNotificationPress = (notificationId) => {
-    console.log(`Notification ${notificationId} pressed`);
-    // Ajoutez ici une logique pour gérer le clic (par exemple, navigation vers un détail)
-  };
+  // Rendu de chaque notification
+  const renderNotification = ({ item }) => (
+    <Card style={styles.notificationCard}>
+      <View style={styles.notificationContent}>
+        <Ionicons name={item.icon} size={30} color="#38B2AC" style={styles.notificationIcon} />
+        <View style={styles.notificationText}>
+          <Text category="s1" style={styles.notificationTitle}>
+            {item.title}
+          </Text>
+          <Text category="p2" appearance="hint">
+            {item.description}
+          </Text>
+          <Text category="c1" appearance="hint" style={styles.notificationDate}>
+            {item.date}
+          </Text>
+        </View>
+      </View>
+    </Card>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* App Bar
-      <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Icon name="arrow-left" size={24} color="#2D3748" />
-        </TouchableOpacity>
-        <Text style={styles.appName}>Notifications</Text>
-      </View> */}
+    <ApplicationProvider {...eva} theme={eva.light}>
+      <Layout style={styles.container}>
+        <StatusBar barStyle="dark-content" />
 
-      {/* Liste des notifications */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {notifications.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Icon name="bell-off" size={50} color="#718096" />
-            <Text style={styles.emptyText}>No notifications yet</Text>
-          </View>
-        ) : (
-          notifications.map((notification, index) => (
-            <Animated.View
-              key={notification.id}
-              style={[
-                styles.notificationCard,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    {
-                      translateY: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [50 * (index + 1), 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.cardContent}
-                onPress={() => handleNotificationPress(notification.id)}
-                activeOpacity={0.8}
-              >
-                {/* Icône */}
-                <View style={styles.iconContainer}>
-                  <Icon name={notification.icon} size={24} color="#38A169" />
-                </View>
+        {/* Header */}
+        <Layout style={styles.header} level="1">
+          <Ionicons name="notifications-outline" size={70} color="#38B2AC" />
+          <Text category="h4" style={styles.headerTitle}>
+            Notifications
+          </Text>
+          <Text category="p2" style={styles.headerSubtitle}>
+            Vos dernières mises à jour
+          </Text>
+        </Layout>
 
-                {/* Informations */}
-                <View style={styles.notificationInfo}>
-                  <Text style={styles.notificationTitle}>{notification.title}</Text>
-                  <Text style={styles.notificationDescription}>
-                    {notification.description}
-                  </Text>
-                  <Text style={styles.timestamp}>{notification.timestamp}</Text>
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-          ))
-        )}
-      </ScrollView>
+        {/* Liste des notifications */}
+        <FlatList
+          data={notifications}
+          renderItem={renderNotification}
+          keyExtractor={(item) => item.id}
+          style={styles.notificationList}
+          ListEmptyComponent={
+            <Text category="p1" appearance="hint" style={styles.emptyText}>
+              Aucune notification pour le moment.
+            </Text>
+          }
+        />
 
-      {/* Barre de menu en bas */}
-      <View style={styles.bottomNav}>
-        {[
-          { icon: 'home', label: 'Home', route: '/' },
-          { icon: 'search', label: 'Search', route: '/search' },
-          { icon: 'shopping-cart', label: 'Cart', route: '/cart' },
-          { icon: 'user', label: 'Profile', route: '/profile' },
-        ].map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.navItem}
-            onPress={() => router.push(item.route)}
-          >
-            <Icon name={item.icon} size={24} color="#38A169" />
-            <Text style={styles.navText}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </SafeAreaView>
+        {/* Bouton Retour */}
+        <Button
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessoryLeft={() => <Ionicons name="arrow-back-outline" size={24} color="#FFF" />}
+        >
+          Retour
+        </Button>
+      </Layout>
+    </ApplicationProvider>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
+    backgroundColor: '#FFFFFF',
   },
-  appBar: {
-    flexDirection: 'row',
+  header: {
     alignItems: 'center',
-    padding: 15,
-    paddingTop: 40,
-    backgroundColor: '#fff',
-    elevation: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    marginTop: 40,
+    marginBottom: 20,
+    backgroundColor: 'transparent',
   },
-  appName: {
-    fontSize: 24,
-    fontWeight: '700',
+  headerTitle: {
     color: '#2D3748',
-    marginLeft: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 8,
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100, // Espace pour la barre de navigation
+  headerSubtitle: {
+    color: '#718096',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  notificationList: {
+    flex: 1,
+    width: '90%',
+    alignSelf: 'center',
   },
   notificationCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    overflow: 'hidden',
+    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F7FAFC',
+    padding: 10,
   },
-  cardContent: {
+  notificationContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E6F3EA',
-    justifyContent: 'center',
-    alignItems: 'center',
+  notificationIcon: {
     marginRight: 15,
   },
-  notificationInfo: {
+  notificationText: {
     flex: 1,
   },
   notificationTitle: {
-    fontSize: 16,
+    color: '#2D3748',
     fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: 4,
   },
-  notificationDescription: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 4,
-  },
-  timestamp: {
+  notificationDate: {
+    marginTop: 5,
     fontSize: 12,
-    color: '#A0AEC0',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#718096',
-    marginTop: 10,
+    textAlign: 'center',
+    marginTop: 20,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    elevation: 5,
-  },
-  navItem: {
-    alignItems: 'center',
-    padding: 5,
-  },
-  navText: {
-    fontSize: 12,
-    color: '#38A169',
-    marginTop: 4,
+  backButton: {
+    backgroundColor: '#38B2AC',
+    borderColor: '#38B2AC',
+    borderRadius: 10,
+    width: '90%',
+    alignSelf: 'center',
+    marginVertical: 20,
+    shadowColor: '#38B2AC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
 
