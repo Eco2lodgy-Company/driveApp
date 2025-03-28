@@ -23,11 +23,11 @@ const userSignupScreen = () => {
     prenom: '',
     telephone: '',
     adresse: '',
-    role: 'Client', // Changé de 'Vendeur' à 'Client'
+    role: 'Client',
     password: '',
     confirmPassword: '',
-    longitude: location ? location.longitude : null,
-    latitude: location ? location.latitude : null,
+    longitude: location ? location.longitude : 'string',
+    latitude: location ? location.latitude : 'string',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,25 +62,27 @@ const userSignupScreen = () => {
         return;
       }
 
-      const dataToSend = {
-        email: formData.email,
-        nom: formData.nom,
-        prenom: formData.prenom,
-        telephone: formData.telephone,
-        adresse: formData.adresse,
-        role: formData.role,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        longitude: formData.longitude,
-        latitude: formData.latitude,
-      };
+      // Create FormData object with specified order, excluding shop fields
+      const dataToSend = new FormData();
+      dataToSend.append('telephone', formData.telephone);
+      dataToSend.append('prenom', formData.prenom);
+      dataToSend.append('latitude', formData.latitude);
+      dataToSend.append('nom', formData.nom);
+      dataToSend.append('adresse', formData.adresse);
+      dataToSend.append('longitude', formData.longitude);
+      dataToSend.append('role', formData.role);
+      dataToSend.append('confirmPassword', formData.confirmPassword);
+      dataToSend.append('password', formData.password);
+      dataToSend.append('email', formData.email);
+
+      console.log("données envoyées :", Object.fromEntries(dataToSend));
 
       const response = await fetch('http://195.35.24.128:8081/api/user/new', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'accept': 'application/json',
         },
-        body: JSON.stringify(dataToSend),
+        body: dataToSend,
       });
 
       if (!response.ok) {
@@ -89,7 +91,7 @@ const userSignupScreen = () => {
 
       setSuccess("Inscription réussie ! Redirection en cours...");
       setTimeout(() => {
-        router.push('/clients/home'); // Redirection adaptée pour un client
+        router.push('/clients/home');
       }, 2000);
 
     } catch (error) {
@@ -107,7 +109,7 @@ const userSignupScreen = () => {
 
         {/* Header */}
         <Layout style={styles.header} level="1">
-          <Ionicons name="person-add-outline" size={70} color="#38B2AC" /> {/* Icône changée */}
+          <Ionicons name="person-add-outline" size={70} color="#38B2AC" />
           <Text category="h4" style={styles.headerTitle}>
             Sign Up as Client
           </Text>
