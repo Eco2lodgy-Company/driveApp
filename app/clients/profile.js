@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useContext} from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,14 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router'; // Pour Expo Router
 import BottomNavigation from './components/BottomNavigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {AuthContext} from '../../AuthContext'
 
 const ProfileScreen = () => {
   const router = useRouter(); // Navigation avec Expo Router
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const { logout } = useContext(AuthContext);
+  
 
   // Données fictives de l'utilisateur
   const user = {
@@ -34,10 +38,15 @@ const ProfileScreen = () => {
     }).start();
   }, [fadeAnim]);
 
-  const handleLogout = () => {
-    console.log('User logged out');
-    // Ajoutez ici votre logique de déconnexion
-  };
+  const handleLogout = async () => {
+    try {
+        console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
+        await logout();
+        router.push('/login');
+    } catch (error) {
+        console.error('Erreur lors de la déconnexion :', error);
+    }
+};
 
   return (
     <SafeAreaView style={styles.container}>
