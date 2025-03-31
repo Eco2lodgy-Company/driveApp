@@ -1,7 +1,5 @@
-import React, { createContext,useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-//import { JWT_SECRET } from "./credentials";
-import { use } from "react";
 
 export const AuthContext = createContext();
 
@@ -10,14 +8,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est déjà connecté
     const checkUser = async () => {
-      const storedUser = await AsyncStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'utilisateur :", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+
     checkUser();
   }, []);
 
@@ -32,10 +35,14 @@ export const AuthProvider = ({ children }) => {
           },
         }
       );
-  
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
       const data = await response.json();
-  
-      if (response.ok && data?.data?.userInfo) {
+
+      if (data?.data?.userInfo) {
         const userData = {
           id: data.data.userInfo.id,
           nom: data.data.userInfo.nom,
@@ -44,46 +51,41 @@ export const AuthProvider = ({ children }) => {
           role: data.data.userInfo.role,
           token: data.data.token,
         };
-  
+
         await AsyncStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
-  
+
         return { success: true, user: userData };
       } else {
         return { success: false, message: data?.message || "Identifiants incorrects" };
       }
     } catch (error) {
       console.error("Erreur lors de la connexion :", error);
-      return { success: false, message: "Une erreur est survenue" };
+      return { success: false, message: "Impossible de se connecter au serveur" };
     }
-  };
-  
-
-  const userDetail = async (userData) =>{
-
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem("user");
-    setUser(null);
+    try {
+      await AsyncStorage.removeItem("user");
+      setUser(null);
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion :", error);
+    }
   };
 
   const getUserData = async () => {
     try {
       const userData = await AsyncStorage.getItem("user");
-      if (userData !== null) {
-        return JSON.parse(userData); // Convertir la chaîne JSON en objet
-      }
-      return null;
+      return userData ? JSON.parse(userData) : null;
     } catch (error) {
       console.error("Erreur lors de la récupération des données :", error);
       return null;
     }
   };
-  
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, getUserData }}>
       {children}
     </AuthContext.Provider>
   );

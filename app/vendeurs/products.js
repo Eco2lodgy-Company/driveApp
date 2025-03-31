@@ -213,8 +213,8 @@ const SellerProductsScreen = () => {
               data={filteredProducts}
               renderItem={renderProduct}
               keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={true} // Activer l'indicateur de scroll pour confirmer le défilement
+              contentContainerStyle={[styles.listContent, { flexGrow: 1 }]} // Assurer que le contenu grandit
               ListHeaderComponent={
                 <Text style={styles.sectionTitle}>
                   {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} trouvé{filteredProducts.length !== 1 ? 's' : ''}
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contentContainer: {
-    flex: 1,
+    flex: 1, // S'assurer que ce conteneur prend tout l'espace disponible
     paddingHorizontal: 16,
     paddingTop: 16,
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   section: {
-    flex: 1,
+    flex: 1, // Permettre à la section de prendre tout l'espace restant
   },
   sectionTitle: {
     fontSize: 16,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 80, // Augmenter le paddingBottom pour s'assurer que le dernier élément est visible au-dessus de BottomNavigation
   },
 });
 

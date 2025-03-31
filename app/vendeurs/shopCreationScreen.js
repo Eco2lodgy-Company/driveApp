@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { StyleSheet, Platform, StatusBar, View, Image, Alert } from 'react-native';
+import { StyleSheet, Platform, StatusBar, View, Image, Alert, ScrollView } from 'react-native';
 import * as eva from '@eva-design/eva';
 import {
   ApplicationProvider,
@@ -8,6 +8,7 @@ import {
   Input,
   Button,
   Spinner,
+  Card,
 } from '@ui-kitten/components';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -270,117 +271,121 @@ const ShopCreationScreen = () => {
     }
   };
 
+  const renderIcon = (iconName) => (
+    <Ionicons name={iconName} size={20} color="#4FD1C5" />
+  );
+
   return (
     <ApplicationProvider {...eva} theme={eva.light}>
       <Layout style={styles.container}>
         <StatusBar barStyle="dark-content" />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Header repensé */}
+          <Layout style={styles.header}>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="storefront-outline" size={48} color="#FFF" />
+            </View>
+            <Text category="h5" style={styles.headerTitle}>
+              Create Your Shop
+            </Text>
+            <Text category="p2" style={styles.headerSubtitle}>
+              Build your online presence in minutes
+            </Text>
+          </Layout>
 
-        {/* Header */}
-        <Layout style={styles.header} level="1">
-          <Ionicons name="storefront-outline" size={70} color="#38B2AC" />
-          <Text category="h4" style={styles.headerTitle}>
-            Create Your Shop
-          </Text>
-          <Text category="p2" style={styles.headerSubtitle}>
-            Set up your selling space
-          </Text>
-        </Layout>
+          {/* Formulaire dans une carte */}
+          <Card style={styles.card}>
+            <Input
+              style={styles.input}
+              placeholder="Shop Name"
+              value={shopData.shopNom}
+              onChangeText={(text) => handleChange('shopNom', text)}
+              accessoryLeft={() => renderIcon('bag-outline')}
+              caption="Required"
+            />
+            <Input
+              style={styles.input}
+              placeholder="Shop Description"
+              value={shopData.shopDescription}
+              onChangeText={(text) => handleChange('shopDescription', text)}
+              multiline
+              numberOfLines={4}
+              accessoryLeft={() => renderIcon('pencil-outline')}
+              caption="Tell us about your shop"
+            />
+            <Input
+              style={styles.input}
+              placeholder="Shop Phone"
+              value={shopData.shopTelephone}
+              onChangeText={(text) => handleChange('shopTelephone', text)}
+              keyboardType="phone-pad"
+              accessoryLeft={() => renderIcon('call-outline')}
+              caption="10 digits required"
+            />
+            <Input
+              style={styles.input}
+              placeholder="Shop Email"
+              value={shopData.email}
+              onChangeText={(text) => handleChange('email', text)}
+              keyboardType="email-address"
+              accessoryLeft={() => renderIcon('mail-outline')}
+              caption="Business email"
+            />
+            <Input
+              style={styles.input}
+              placeholder="Shop Address"
+              value={shopData.shopAdresse}
+              onChangeText={(text) => handleChange('shopAdresse', text)}
+              accessoryLeft={() => renderIcon('location-outline')}
+              caption="Physical location"
+            />
 
-        {/* Form Container */}
-        <Layout style={styles.formContainer}>
-          {/* Inputs */}
-          <Input
-            style={styles.input}
-            placeholder="Shop Name"
-            value={shopData.shopNom}
-            onChangeText={(text) => handleChange('shopNom', text)}
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="bag-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
-          <Input
-            style={[styles.input, styles.textArea]}
-            placeholder="Shop Description"
-            value={shopData.shopDescription}
-            onChangeText={(text) => handleChange('shopDescription', text)}
-            multiline
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="pencil-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
-          <Input
-            style={styles.input}
-            placeholder="Shop Phone Number"
-            value={shopData.shopTelephone}
-            onChangeText={(text) => handleChange('shopTelephone', text)}
-            keyboardType="phone-pad"
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="call-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
-          <Input
-            style={styles.input}
-            placeholder="Shop Email"
-            value={shopData.email}
-            onChangeText={(text) => handleChange('email', text)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="mail-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
-          <Input
-            style={styles.input}
-            placeholder="Shop Address"
-            value={shopData.shopAdresse}
-            onChangeText={(text) => handleChange('shopAdresse', text)}
-            textStyle={styles.inputText}
-            placeholderTextColor="#A0AEC0"
-            accessoryLeft={() => (
-              <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={24} color="#38B2AC" />
-              </View>
-            )}
-          />
+            {/* Section Bannière */}
+            <Layout style={styles.bannerSection}>
+              <Text category="s1" style={styles.sectionTitle}>
+                Shop Banner
+              </Text>
+              {shopData.shopBanner ? (
+                <View style={styles.bannerContainer}>
+                  <Image
+                    source={{ uri: shopData.shopBanner }}
+                    style={styles.bannerImage}
+                  />
+                  <Button
+                    size="small"
+                    status="danger"
+                    onPress={() => setShopData({ ...shopData, shopBanner: null })}
+                    style={styles.removeButton}
+                  >
+                    Remove
+                  </Button>
+                </View>
+              ) : (
+                <Button
+                  style={styles.uploadButton}
+                  onPress={pickImage}
+                  accessoryLeft={() => renderIcon('image-outline')}
+                >
+                  Upload Banner
+                </Button>
+              )}
+            </Layout>
 
-          {/* Upload Banner */}
-          <Button
-            style={styles.uploadButton}
-            onPress={pickImage}
-            accessoryLeft={() => <Ionicons name="image-outline" size={24} color="#FFFFFF" />}
-          >
-            {shopData.shopBanner ? 'Change Shop Banner' : 'Upload Shop Banner'}
-          </Button>
-          {shopData.shopBanner && (
-            <Image source={{ uri: shopData.shopBanner }} style={styles.bannerPreview} resizeMode="cover" />
-          )}
-
-          {/* Create Button */}
-          <Button
-            style={styles.createButton}
-            onPress={handleCreateShop}
-            disabled={isLoading}
-            accessoryLeft={isLoading ? () => <Spinner size="small" /> : null}
-          >
-            {!isLoading && 'CREATE SHOP'}
-          </Button>
-        </Layout>
+            {/* Bouton de création */}
+            <Button
+              style={styles.createButton}
+              onPress={handleCreateShop}
+              disabled={isLoading}
+              accessoryRight={isLoading ? () => <Spinner size="small" /> : null}
+            >
+              {() => (
+                <Text style={styles.createButtonText}>
+                  {isLoading ? 'Creating...' : 'Create Shop'}
+                </Text>
+              )}
+            </Button>
+          </Card>
+        </ScrollView>
       </Layout>
     </ApplicationProvider>
   );
@@ -389,85 +394,82 @@ const ShopCreationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F7FAFC',
+    paddingTop: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    padding: 20,
     backgroundColor: 'transparent',
+  },
+  headerIconContainer: {
+    backgroundColor: '#4FD1C5',
+    padding: 15,
+    borderRadius: 50,
+    marginBottom: 10,
   },
   headerTitle: {
     color: '#2D3748',
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 8,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   headerSubtitle: {
     color: '#718096',
-    marginTop: 8,
     fontSize: 14,
   },
-  formContainer: {
-    backgroundColor: 'transparent',
-    width: '90%',
-    maxWidth: 400,
+  card: {
+    marginHorizontal: 15,
+    borderRadius: 15,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   input: {
-    marginBottom: 20,
-    borderRadius: 10,
+    marginBottom: 15,
+    borderRadius: 8,
+    backgroundColor: '#EDF2F7',
     borderColor: '#E2E8F0',
-    backgroundColor: '#F7FAFC',
-    height: 40,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
   },
-  textArea: {
-    height: 150, // Agrandi pour plus de confort
-    textAlignVertical: 'top',
+  bannerSection: {
+    marginVertical: 15,
+    backgroundColor: 'transparent',
   },
-  inputText: {
-    fontSize: 16,
+  sectionTitle: {
+    marginBottom: 10,
     color: '#2D3748',
   },
-  iconContainer: {
-    marginRight: 8,
+  bannerContainer: {
+    alignItems: 'center',
+  },
+  bannerImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  removeButton: {
+    width: '40%',
   },
   uploadButton: {
-    backgroundColor: '#38B2AC',
-    borderColor: '#38B2AC',
-    borderRadius: 12,
-    paddingVertical: 14,
-    height: 56, // Bouton plus grand pour une meilleure ergonomie
-    marginBottom: 20,
-    shadowColor: '#38B2AC',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  bannerPreview: {
-    width: '100%',
-    height: 200, // Agrandi pour une meilleure visibilité
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 2, // Bordure plus visible
-    borderColor: '#38B2AC', // Bordure turquoise pour cohérence
+    backgroundColor: '#4FD1C5',
+    borderColor: '#4FD1C5',
+    borderRadius: 8,
   },
   createButton: {
-    backgroundColor: '#38B2AC',
-    borderColor: '#38B2AC',
-    borderRadius: 10,
+    marginTop: 20,
+    backgroundColor: '#4FD1C5',
+    borderColor: '#4FD1C5',
+    borderRadius: 8,
     paddingVertical: 12,
-    height: 50,
-    shadowColor: '#38B2AC',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
