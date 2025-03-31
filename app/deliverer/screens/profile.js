@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,24 +10,32 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { AuthContext } from '../../../AuthContext';
 
 const ProfileScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
+  const [userData,setUserData] = useState('');
+  const { logout } = useContext(AuthContext);
+  const router = useRouter();
+  
 
   const [profile, setProfile] = useState({
-    name: 'Jean Dupont',
-    email: 'jean.dupont@email.com',
-    phone: '+33 6 12 34 56 78',
-    address: '123 Rue de Paris, 75001 Paris',
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
     avatar: 'https://via.placeholder.com/150',
-    totalLivraisons: 142,
-    revenuTotal: 3567.89,
-    joinedDate: '2024-01-15',
+    totalLivraisons: 0,
+    revenuTotal: 0,
+    joinedDate: '',
   });
 
   useEffect(() => {
+    // Animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -41,11 +49,68 @@ const ProfileScreen = () => {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Fetch profile data
+    fetchProfile();
   }, []);
 
-  const handleLogout = () => {
-    alert('Vous avez été déconnecté');
-    // Logique de déconnexion à implémenter
+  const fetchProfile = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('user'); // Récupération du token
+      if (!storedData) {
+        console.error("Aucun token trouvé !");
+        return;
+      }
+  
+      const Data = JSON.parse(storedData); // Convertir la chaîne en objet JSON
+  
+      if (!Data.email || !Data.token) {
+        console.error("Données du token incomplètes !");
+        return;
+      }
+  
+      const response = await fetch(
+        `http://195.35.24.128:8081/api/user/findByUsername?email=${Data.email}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${Data.token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+  
+      const result = await response.json();
+  
+      if (result.status === 'succes' && result.data) {
+        const userData = result.data;
+        setProfile({
+          name: `${userData.prenom} ${userData.nom}`,
+          email: userData.email,
+          phone: userData.telephone,
+          address: userData.adresse || 'Non spécifiée',
+          avatar: 'https://via.placeholder.com/150',
+          totalLivraisons: 142, // Valeur statique
+          revenuTotal: 3567.89, // Valeur statique
+          joinedDate: userData.createdAt,
+        });
+      } else {
+        console.error("Erreur API:", result);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération du profil:', error);
+      alert('Erreur lors du chargement du profil');
+    }
+  };
+  
+  const handleLogout = async () => {
+    try {
+      console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion :', error);
+    }
   };
 
   return (
@@ -80,7 +145,7 @@ const ProfileScreen = () => {
           />
           <Text style={styles.profileName}>{profile.name}</Text>
           <Text style={styles.profileJoined}>
-            Membre depuis {new Date(profile.joinedDate).toLocaleDateString()}
+            Membre depuis {profile.joinedDate ? new Date(profile.joinedDate).toLocaleDateString() : ''}
           </Text>
         </Animated.View>
 
