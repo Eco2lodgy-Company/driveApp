@@ -26,8 +26,7 @@ const SellerProductsScreen = () => {
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
-      console.error("Chemin invalide:", dbPath);
-      return "";
+      return "https://via.placeholder.com/60";
     }
     const basePath = "/root/data/drive/products/";
     const baseUrl = "http://alphatek.fr:8086/";
@@ -37,10 +36,9 @@ const SellerProductsScreen = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Récupérer les données utilisateur depuis AsyncStorage
         const userData = await AsyncStorage.getItem('user');
-        const user = userData ? JSON.parse(userData) : null; // Parser le JSON
-        const token = user?.token; // Accéder au token dans l'objet user
+        const user = userData ? JSON.parse(userData) : null;
+        const token = user?.token;
 
         if (!token) {
           console.error("Aucun token trouvé dans AsyncStorage");
@@ -48,11 +46,10 @@ const SellerProductsScreen = () => {
           return;
         }
 
-        // Récupérer les produits avec le token
         const response = await fetch('http://195.35.24.128:8081/api/products/findByShop/19?username=bazoum@gmail.com', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`, // Utiliser le token directement
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -75,17 +72,16 @@ const SellerProductsScreen = () => {
         setLoading(false);
       }
 
-      // Lancer les animations
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.spring(headerAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          tension: 60,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]).start();
@@ -100,38 +96,56 @@ const SellerProductsScreen = () => {
   );
 
   const renderProduct = ({ item }) => (
-    <View style={styles.productCard}>
-      <View style={styles.productIcon}>
-        <Icon name="package" size={20} color="#6B7280" />
-      </View>
-      <TouchableOpacity
-        style={styles.productDetails}
-        onPress={() => router.push(`vendeurs/productDetails?productId=${item.id}`)}
+    <TouchableOpacity
+      style={styles.productCard}
+      onPress={() => router.push(`vendeurs/productDetails?productId=${item.id}`)}
+      activeOpacity={0.7}
+    >
+      <LinearGradient
+        colors={['#FFFFFF', '#FAFAFA']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.productGradient}
       >
-        <Image
-          source={{ uri: item.image }}
-          style={styles.productImage}
-          resizeMode="cover"
-          onError={(e) => console.log('Erreur de chargement image:', e.nativeEvent.error)}
-        />
-        <View style={styles.productInfo}>
-          <Text style={styles.productName}>#{item.id} - {item.name}</Text>
-          <Text style={styles.productPrice}>{item.price} FCFA</Text>
-          <Text style={[
-            styles.productStock,
-            { color: item.stock > 10 ? '#10B981' : '#F44336' }
-          ]}>
-            Stock: {item.stock}
-          </Text>
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.image }}
+            style={styles.productImage}
+            resizeMode="contain"
+            defaultSource={{ uri: 'https://via.placeholder.com/60' }}
+          />
         </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => router.push(`vendeurs/editProduct?productId=${item.id}`)}
-      >
-        <Icon name="edit-2" size={16} color="#6B7280" />
-      </TouchableOpacity>
-    </View>
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
+          <View style={styles.productDetails}>
+            <Text style={styles.productPrice}>{item.price.toLocaleString()} FCFA</Text>
+            <View style={[
+              styles.stockBadge,
+              { backgroundColor: item.stock > 10 ? '#ECFDF5' : '#FFF1F2' }
+            ]}>
+              <Text style={[
+                styles.productStock,
+                { color: item.stock > 10 ? '#15803D' : '#DC2626' }
+              ]}>
+                {item.stock} en stock
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.productId}>Réf: #{item.id}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            router.push(`vendeurs/editProduct?productId=${item.id}`);
+          }}
+        >
+          <Icon name="edit-2" size={20} color="#4B5563" />
+        </TouchableOpacity>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 
   return (
@@ -141,66 +155,78 @@ const SellerProductsScreen = () => {
         transform: [{
           translateY: headerAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [-20, 0],
+            outputRange: [-30, 0],
           }),
         }],
       }]}>
         <LinearGradient
-          colors={['#fff', '#F9FAFB']}
+          colors={['#FFFFFF', '#F9FAFB']}
           style={styles.headerGradient}
         >
           <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.push('/sellers/home')}
+            >
+              <Icon name="chevron-left" size={28} color="#111827" />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Mes Produits</Text>
             <TouchableOpacity
-              onPress={() => router.push('/sellers/home')}
-              style={styles.profileButton}
+              style={styles.addButton}
+              onPress={() => router.push('vendeurs/addProducts')}
             >
-              <Icon name="arrow-left" size={20} color="#111827" />
+              <LinearGradient
+                colors={['#4CAF50', '#388E3C']}
+                style={styles.addButtonGradient}
+              >
+                <Icon name="plus" size={24} color="#FFFFFF" />
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </LinearGradient>
       </Animated.View>
 
       <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher (ID, nom...)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher un produit..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
 
         <View style={styles.section}>
           {loading ? (
-            <Text style={styles.loadingText}>Chargement...</Text>
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Chargement des produits...</Text>
+            </View>
           ) : products.length === 0 ? (
-            <Text style={styles.emptyText}>Pas de produit disponible</Text>
+            <View style={styles.emptyContainer}>
+              <Icon name="package" size={40} color="#9CA3AF" />
+              <Text style={styles.emptyText}>Aucun produit disponible</Text>
+            </View>
           ) : (
-            <>
-              <Text style={styles.sectionTitle}>
-                {filteredProducts.length} produit(s) trouvé(s)
-              </Text>
-              <FlatList
-                data={filteredProducts}
-                renderItem={renderProduct}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                  <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-                }
-              />
-            </>
+            <FlatList
+              data={filteredProducts}
+              renderItem={renderProduct}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              ListHeaderComponent={
+                <Text style={styles.sectionTitle}>
+                  {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} trouvé{filteredProducts.length !== 1 ? 's' : ''}
+                </Text>
+              }
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Aucun produit ne correspond à votre recherche</Text>
+              }
+            />
           )}
         </View>
       </Animated.View>
-
-      <TouchableOpacity
-        style={styles.floatingAddButton}
-        onPress={() => router.push('/sellers/addProducts')}
-      >
-        <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.floatingAddGradient}>
-          <Icon name="plus" size={24} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
 
       <BottomNavigation />
     </SafeAreaView>
@@ -210,128 +236,183 @@ const SellerProductsScreen = () => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
   },
   header: {
     paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   headerGradient: {
     paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#111827',
+    letterSpacing: 0.2,
   },
-  profileButton: {
-    padding: 8,
+  backButton: {
+    padding: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 10,
   },
-  contentContainer: {
-    padding: 16,
-    flex: 1,
-  },
-  searchInput: {
-    backgroundColor: '#fff',
+  addButton: {
     borderRadius: 10,
-    padding: 12,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
+    padding: 6,
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  searchIcon: {
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 12,
+    fontSize: 16,
+    color: '#111827',
   },
   section: {
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 12,
+    paddingHorizontal: 4,
   },
   productCard: {
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  productGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 1,
   },
-  productIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  imageContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     backgroundColor: '#F3F4F6',
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  productDetails: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    overflow: 'hidden',
   },
   productImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 12,
+    width: '100%',
+    height: '100%',
   },
   productInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   productName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 4,
+  },
+  productDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
   },
   productPrice: {
-    fontSize: 12,
-    color: '#10B981',
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16A34A',
+  },
+  stockBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   productStock: {
     fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+    fontWeight: '500',
   },
-  editButton: {
+  productId: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  actionButton: {
     padding: 8,
+    marginLeft: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
-  floatingAddButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-  },
-  floatingAddGradient: {
-    padding: 12,
-    borderRadius: 50,
-    alignItems: 'center',
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   emptyText: {
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
-    marginTop: 20,
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
-    textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
-    marginTop: 20,
+  },
+  listContent: {
+    paddingBottom: 20,
   },
 });
 
