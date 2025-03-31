@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { AuthContext } from '../../AuthContext';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
 
 const SellerDashboardScreen = () => {
@@ -20,6 +21,7 @@ const SellerDashboardScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const { user } = useContext(AuthContext);
+  const [userData,setUserData] = useState("");
 
   const stats = {
     totalSales: 2450.75,
@@ -53,6 +55,42 @@ const SellerDashboardScreen = () => {
       }),
     ]).start();
   }, []);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem("user"); // Récupération du token
+        if (!storedData) {
+          console.error("Aucun token trouvé !");
+          return;
+        }
+
+        let Data;
+        try {
+          Data = JSON.parse(storedData); // Convertir en JSON
+          setUserData(Data);
+        } catch (error) {
+          console.error("Erreur lors de l'analyse du JSON :", error);
+          return;
+        }
+
+        if (!Data.email || !Data.token) {
+          console.error("Données du token incomplètes !");
+          return;
+        }
+
+        console.log("Données de l'utilisateur récupérées :", Data);
+
+        // Ajoute ici la logique pour utiliser Data (ex: requête API)
+
+      } catch (error) {
+        console.error("Erreur lors de la récupération du profil :", error);
+      }
+    };
+
+    fetchProfile(); // Appel de la fonction
+  }, []); // Dépendance vide → exécution au montage
+  
 
   const renderOrder = ({ item }) => (
     <View style={styles.orderCard}>
@@ -121,7 +159,7 @@ const SellerDashboardScreen = () => {
               <Icon name="user" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.headerSubtitle}>{user.nom || 'vide'}  {user.prenom || 'vide'}</Text>
+          <Text style={styles.headerSubtitle}>{userData.nom || 'vide'}  {userData.prenom || 'vide'}</Text>
         </LinearGradient>
       </Animated.View>
 
