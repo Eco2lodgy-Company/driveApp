@@ -172,7 +172,7 @@ const PanierScreen = () => {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push('/clients/DeliveryScreen');
+      router.push('/clients/shippingOption');
       setOrderStatus('success');
     } catch (error) {
       setOrderStatus('error');
