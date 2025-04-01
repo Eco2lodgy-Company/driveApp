@@ -95,7 +95,7 @@ const PanierScreen = () => {
         id: panier.id.toString(),
         name: panier.produits[0]?.nom || "Produit inconnu",
         price: panier.produits[0]?.prix || 1,
-        quantity: panier.produits[0]?.quantite || 1,
+        quantity:1,
         image: convertPathToUrl(panier.produits[0]?.imagePath) || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
         description: panier.produits[0]?.description || "Aucune description",
       }));
