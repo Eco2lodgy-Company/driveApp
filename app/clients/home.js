@@ -21,12 +21,11 @@ import BottomNavigation from './components/BottomNavigation';
 
 const createInfiniteAds = (adsArray) => [...adsArray, ...adsArray, ...adsArray, ...adsArray, ...adsArray];
 
-const categories = ["All", "Clothing", "Shoes", "Accessories", "Jewelry", "Bags"];
-
 const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
   const [loading, setLoading] = useState(true);
   const [ads, setAds] = useState([]);
   const router = useRouter();
@@ -59,6 +58,42 @@ const HomeScreen = () => {
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
 
+  // Fetch des catégories avec token
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!userData || !userData.token) {
+        console.error('Token utilisateur manquant pour les catégories');
+        return;
+      }
+      try {
+        const response = await fetch('http://195.35.24.128:8081/api/productCategories/liste?username=test25%40gmail.com', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userData.token}`, // Ajout du token
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status === "success" && Array.isArray(data.data)) {
+          const categoryNames = data.data.map(category => category.intitule);
+          setCategories(["All", ...categoryNames]);
+        } else {
+          console.error("Format de données inattendu pour les catégories:", data);
+          setCategories(["All"]);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des catégories:', error);
+        setCategories(["All"]);
+      }
+    };
+    if (userData) { // Attendre que userData soit disponible
+      fetchCategories();
+    }
+  }, [userData]);
+
   // Fetch des publicités avec token et logs
   useEffect(() => {
     const fetchAds = async () => {
@@ -80,16 +115,16 @@ const HomeScreen = () => {
         const data = await response.json();
         if (data.status === "success" && Array.isArray(data.data)) {
           const mappedAds = data.data.map(ad => {
-            console.log("Chemin brut depuis la base (mediaPath):", ad.mediaPath); // Log du chemin brut
+            console.log("Chemin brut depuis la base (mediaPath):", ad.mediaPath);
             const convertedUrl = convertAdsPathToUrl(ad.mediaPath);
-            console.log("URL après conversion:", convertedUrl); // Log de l'URL convertie
+            console.log("URL après conversion:", convertedUrl);
             return {
               id: ad.id.toString(),
               image: convertedUrl,
             };
           });
           setAds(mappedAds);
-          console.log("Liste complète des publicités mappées:", mappedAds); // Log de la liste finale
+          console.log("Liste complète des publicités mappées:", mappedAds);
         } else {
           console.error("Format de données inattendu:", data);
           setAds([]);
