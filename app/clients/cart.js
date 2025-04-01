@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
-  Animated, // Ajouté pour l'animation
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import BottomNavigation from './components/BottomNavigation';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Icon from 'react-native-vector-icons/Feather';
 
 const PanierScreen = () => {
   const [articles, setArticles] = useState([]);
@@ -25,7 +26,7 @@ const PanierScreen = () => {
   const [imgUrl, setImgUrl] = useState('');
   const [userId, setUserId] = useState(null);
   const router = useRouter();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current; // Ajouté pour l'animation
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
@@ -62,7 +63,6 @@ const PanierScreen = () => {
     fetchUserData();
   }, []);
 
-  // Animation au montage
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -90,12 +90,13 @@ const PanierScreen = () => {
       }
 
       const data = await response.json();
+      console.log("Articles récupérés :", data.data); // Log pour vérifier les données
 
       const transformedArticles = data.data.map((panier) => ({
         id: panier.id.toString(),
         name: panier.produits[0]?.nom || "Produit inconnu",
         price: panier.produits[0]?.prix || 1,
-        quantity:1,
+        quantity: 1,
         image: convertPathToUrl(panier.produits[0]?.imagePath) || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
         description: panier.produits[0]?.description || "Aucune description",
       }));
@@ -120,6 +121,46 @@ const PanierScreen = () => {
 
   const removeArticle = (id) => {
     setArticles(prevArticles => prevArticles.filter(article => article.id !== id));
+  };
+
+  const clearCart = async () => {
+    Alert.alert(
+      "Vider le panier",
+      "Êtes-vous sûr de vouloir supprimer tous les articles du panier ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Oui",
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const response = await fetch(
+                `http://195.35.24.128:8081/api/paniers/client/clear/${userId}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error("Erreur lors de la suppression du panier");
+              }
+
+              setArticles([]);
+              Alert.alert("Succès", "Le panier a été vidé.");
+            } catch (error) {
+              console.error("Erreur lors de la vidange du panier:", error);
+              Alert.alert("Erreur", "Impossible de vider le panier.");
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const calculateSubtotal = () => {
@@ -210,7 +251,17 @@ const PanierScreen = () => {
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.container}>
-        <Text style={styles.title}>Votre Panier</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Votre Panier</Text>
+          {articles.length > 0 ? (
+            <TouchableOpacity onPress={clearCart} style={styles.clearCartButton}>
+              <Icon name="trash-2" size={24} color="#fff" />
+              <Text style={styles.clearCartText}>Vider</Text>
+            </TouchableOpacity>
+          ) : (
+            console.log("Pas d'articles, bouton non affiché")
+          )}
+        </View>
 
         {articles.length === 0 && !orderStatus && (
           <Text style={styles.empty}>Votre panier est vide</Text>
@@ -228,7 +279,7 @@ const PanierScreen = () => {
           </View>
         )}
 
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -279,19 +330,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: 40,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    zIndex: 10,
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 20,
     textAlign: 'left',
+  },
+  clearCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E74C3C', // Fond rouge vif pour le rendre très visible
+    padding: 8,
+    borderRadius: 8,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  clearCartText: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 4,
+    fontWeight: '600',
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   item: {
     flexDirection: 'row',
@@ -456,7 +532,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff', // Fond blanc comme demandé
+    backgroundColor: '#fff',
   },
   loadingAnimation: {
     alignItems: 'center',
