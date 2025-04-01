@@ -19,14 +19,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomNavigation from './components/BottomNavigation';
 
-const ads = [
-  { id: 'ad-1', image: 'https://plus.unsplash.com/premium_photo-1668133957823-456f1c87b58c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8YmxhY2slMjBmcmlkYXl8ZW58MHx8MHx8fDA%3D' },
-  { id: 'ad-2', image: 'https://images.unsplash.com/photo-1526178613552-2b45c6c302f0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGJsYWNrJTIwZnJpZGF5fGVufDB8fDB8fHww' },
-  { id: 'ad-3', image: 'https://images.unsplash.com/photo-1742156345582-b857d994c84e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyMnx8fGVufDB8fHx8fA%3D%3D' },
-];
-
-// Créer une liste infinie en dupliquant les éléments plusieurs fois
-const infiniteAds = [...ads, ...ads, ...ads, ...ads, ...ads]; // Duplique 5 fois pour éviter les limites visibles
+const createInfiniteAds = (adsArray) => [...adsArray, ...adsArray, ...adsArray, ...adsArray, ...adsArray];
 
 const categories = ["All", "Clothing", "Shoes", "Accessories", "Jewelry", "Bags"];
 
@@ -35,6 +28,7 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ads, setAds] = useState([]);
   const router = useRouter();
   const { width } = useWindowDimensions();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -43,7 +37,7 @@ const HomeScreen = () => {
   const numColumns = Math.max(2, Math.floor(width / 180));
   const cardWidth = (width - 48) / numColumns;
   const adFlatListRef = useRef(null);
-  const adWidth = width - 32; // Largeur de chaque pub ajustée à l'écran avec marges
+  const adWidth = width - 32;
 
   const convertPathToUrl = (dbPath) => {
     if (!dbPath || typeof dbPath !== "string") {
@@ -54,6 +48,63 @@ const HomeScreen = () => {
     const baseUrl = "http://alphatek.fr:8086/";
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
+
+  const convertAdsPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/shop/";
+    const baseUrl = "http://alphatek.fr:8084/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+
+  // Fetch des publicités avec token et logs
+  useEffect(() => {
+    const fetchAds = async () => {
+      if (!userData || !userData.token) {
+        console.error('Token utilisateur manquant pour les publicités');
+        return;
+      }
+      try {
+        const response = await fetch('http://195.35.24.128:8081/api/pubs/liste', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userData.token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status === "success" && Array.isArray(data.data)) {
+          const mappedAds = data.data.map(ad => {
+            console.log("Chemin brut depuis la base (mediaPath):", ad.mediaPath); // Log du chemin brut
+            const convertedUrl = convertAdsPathToUrl(ad.mediaPath);
+            console.log("URL après conversion:", convertedUrl); // Log de l'URL convertie
+            return {
+              id: ad.id.toString(),
+              image: convertedUrl,
+            };
+          });
+          setAds(mappedAds);
+          console.log("Liste complète des publicités mappées:", mappedAds); // Log de la liste finale
+        } else {
+          console.error("Format de données inattendu:", data);
+          setAds([]);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des publicités:', error);
+        setAds([]);
+      }
+    };
+    if (userData) {
+      fetchAds();
+    }
+  }, [userData]);
+
+  const infiniteAds = createInfiniteAds(ads);
 
   useEffect(() => {
     Animated.parallel([
@@ -126,32 +177,28 @@ const HomeScreen = () => {
     fetchProducts();
   }, [userData]);
 
-  // Défilement automatique des publicités en boucle infinie
   useEffect(() => {
     let currentIndex = 0;
     const interval = setInterval(() => {
       if (adFlatListRef.current && infiniteAds.length > 0) {
-        currentIndex = (currentIndex + 1) % ads.length; // Boucle sur la longueur originale
-        const offset = currentIndex * adWidth; // Offset basé sur la largeur dynamique
+        currentIndex = (currentIndex + 1) % ads.length;
+        const offset = currentIndex * adWidth;
         adFlatListRef.current.scrollToOffset({
           offset: offset,
           animated: true,
         });
-
-        // Repositionnement discret au début après une boucle complète
         if (currentIndex === 0) {
           setTimeout(() => {
             adFlatListRef.current.scrollToOffset({
               offset: 0,
               animated: false,
             });
-          }, 500); // Délai pour laisser l'animation se terminer
+          }, 500);
         }
       }
-    }, 3000); // Défilement toutes les 3 secondes
-
-    return () => clearInterval(interval); // Nettoyage de l'intervalle
-  }, [adWidth]); // Dépendance sur adWidth pour recalcul si la largeur change
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [adWidth, ads]);
 
   const filteredProducts = products?.filter((product) => {
     if (!product) return false;
@@ -194,7 +241,7 @@ const HomeScreen = () => {
     <TouchableOpacity style={styles.adContainer}>
       <Image
         source={{ uri: item.image }}
-        style={[styles.adImage, { width: adWidth }]} // Largeur dynamique
+        style={[styles.adImage, { width: adWidth }]}
         resizeMode="cover"
       />
     </TouchableOpacity>
@@ -282,7 +329,6 @@ const HomeScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Filtres */}
         <View style={styles.filterWrapper}>
           <FlatList
             horizontal
@@ -294,7 +340,6 @@ const HomeScreen = () => {
           />
         </View>
 
-        {/* Section Publicités */}
         <Text style={styles.sectionTitle}>Publicités</Text>
         <View style={styles.adWrapper}>
           <FlatList
@@ -305,13 +350,12 @@ const HomeScreen = () => {
             keyExtractor={(item, index) => `${item.id}-${index}`}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.adListContainer}
-            snapToInterval={adWidth} // Aligne chaque pub à la largeur de l'écran
+            snapToInterval={adWidth}
             decelerationRate="fast"
             initialScrollIndex={0}
           />
         </View>
 
-        {/* Section Articles */}
         <Text style={styles.sectionTitle}>Articles</Text>
         <FlatList
           data={filteredProducts}
@@ -333,6 +377,7 @@ const HomeScreen = () => {
   );
 };
 
+// Styles inchangés
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
@@ -423,7 +468,7 @@ const styles = StyleSheet.create({
   },
   adWrapper: {
     width: '100%',
-    overflow: 'hidden', // Masque les pubs non visibles
+    overflow: 'hidden',
   },
   adListContainer: {
     paddingVertical: 8,
