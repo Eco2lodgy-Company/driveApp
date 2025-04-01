@@ -90,7 +90,7 @@ const PanierScreen = () => {
       }
 
       const data = await response.json();
-      console.log("Articles récupérés :", data.data); // Log pour vérifier les données
+      console.log("Articles récupérés :", data.data);
 
       const transformedArticles = data.data.map((panier) => ({
         id: panier.id.toString(),
@@ -123,7 +123,8 @@ const PanierScreen = () => {
     setArticles(prevArticles => prevArticles.filter(article => article.id !== id));
   };
 
-  const clearCart = async () => {
+  // Nouvelle fonction handleClearCart
+  const handleClearCart = () => {
     Alert.alert(
       "Vider le panier",
       "Êtes-vous sûr de vouloir supprimer tous les articles du panier ?",
@@ -254,7 +255,7 @@ const PanierScreen = () => {
         <View style={styles.headerRow}>
           <Text style={styles.title}>Votre Panier</Text>
           {articles.length > 0 ? (
-            <TouchableOpacity onPress={clearCart} style={styles.clearCartButton}>
+            <TouchableOpacity onPress={handleClearCart} style={styles.clearCartButton}>
               <Icon name="trash-2" size={24} color="#fff" />
               <Text style={styles.clearCartText}>Vider</Text>
             </TouchableOpacity>
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   clearCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E74C3C', // Fond rouge vif pour le rendre très visible
+    backgroundColor: '#E74C3C',
     padding: 8,
     borderRadius: 8,
     elevation: 5,
