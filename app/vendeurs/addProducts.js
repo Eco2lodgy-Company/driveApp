@@ -76,6 +76,8 @@ console.log("Contenu id :", parsedUser.token);
         const shopData = await shopResponse.json();
         if (shopData.status === 'success' && shopData.data) {
           setShopId(shopData.data.id);
+          await AsyncStorage.setItem("Shop", JSON.stringify(shopData.data.id));
+
         } else {
           throw new Error('Aucune boutique trouvée');
         }
