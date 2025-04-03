@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,6 +57,92 @@ const HomeScreen = () => {
     const basePath = "/root/data/drive/shop/";
     const baseUrl = "http://alphatek.fr:8084/";
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+
+  const handleAddToCart = async (product, quantity) => {
+    if (!product || !userData?.id || !userData?.token) {
+      Alert.alert('Erreur', 'Informations utilisateur ou produit manquantes');
+      return;
+    }
+
+    try {
+      const checkResponse = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userData.id}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/hal+json',
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      if (!checkResponse.ok) {
+        const errorText = await checkResponse.text();
+        throw new Error(`Erreur vérification panier: ${errorText}`);
+      }
+
+      const cartData = await checkResponse.json();
+
+      if (!cartData?.data || !Array.isArray(cartData.data)) {
+        throw new Error('Structure de réponse invalide');
+      }
+
+      if (cartData.data.length === 0) {
+        const createResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/new', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userData.token}`,
+          },
+          body: JSON.stringify({
+            produits: [{
+              idProduit: product.id,
+              quantite: quantity,
+              dateAjout: new Date().toISOString()
+            }],
+            clientId: userData.id
+          })
+        });
+
+        if (!createResponse.ok) {
+          const errorText = await createResponse.text();
+          throw new Error(`Erreur création: ${errorText}`);
+        }
+
+        Alert.alert('Succès', `${product.name} ajouté à un nouveau panier`);
+      } else {
+        const existingCart = cartData.data[0];
+
+        const updateData = {
+          id: existingCart.id,
+          produits: [{
+            idProduit: product.id,
+            quantite: quantity,
+            dateAjout: new Date().toISOString()
+          }],
+          clientId: userData.id
+        };
+
+        const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userData.token}`,
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text();
+          console.error('Réponse serveur:', errorText);
+          throw new Error(`Erreur mise à jour: ${errorText}`);
+        }
+
+        Alert.alert('Succès', `${product.name} ajouté au panier`);
+        console.log(`le produit: ${product.name} a été ajouté au panier avec succès`);
+      }
+    } catch (error) {
+      console.error('Erreur complète:', error);
+      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message}`);
+    }
   };
 
   useEffect(() => {
@@ -195,6 +282,7 @@ const HomeScreen = () => {
           shop: item.boutiqueNom,
           category: item.categorieIntitule,
           image: convertPathToUrl(item.imagePath),
+          quantity: item.quantite || item.stock || 0,
         }));
         setProducts(mappedProducts);
       } catch (error) {
@@ -239,6 +327,12 @@ const HomeScreen = () => {
     return matchesCategory && matchesSearch;
   }) || [];
 
+  const getQuantityColor = (quantity) => {
+    if (quantity === 0) return '#EF4444'; // Rouge pour 0
+    if (quantity < 5) return '#F59E0B'; // Orange pour < 5
+    return '#4CAF50'; // Vert sinon
+  };
+
   const renderProduct = ({ item }) => (
     <View style={[styles.productCard, { width: cardWidth }]}>
       <TouchableOpacity
@@ -262,15 +356,20 @@ const HomeScreen = () => {
             <Icon name="shopping-bag" size={14} color="#6B7280" />
             <Text style={styles.productShop} numberOfLines={1}>{item.shop}</Text>
           </View>
+          <View style={styles.quantityContainer}>
+            <Text style={[styles.quantityText, { color: getQuantityColor(item.quantity) }]}>
+              Disponible : {item.quantity} unité{item.quantity !== 1 ? 's' : ''}
+            </Text>
+          </View>
           <TouchableOpacity
             style={styles.addToCartButton}
             onPress={(e) => {
               e.stopPropagation();
-              console.log(`Ajouté ${item.name} au panier`);
+              handleAddToCart(item, 1); // Ajoute 1 unité par défaut
             }}
             activeOpacity={0.7}
           >
-            <Icon name="plus" size={16} color="#fff" />
+            <Icon name="shopping-cart" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -697,6 +796,13 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginLeft: 4,
     flex: 1,
+  },
+  quantityContainer: {
+    marginBottom: 12,
+  },
+  quantityText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   addToCartButton: {
     backgroundColor: '#4CAF50',
