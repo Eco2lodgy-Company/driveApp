@@ -69,8 +69,8 @@ const DeliveryOptionScreen = () => {
   const handleContinue = () => {
     if (deliveryOption) {
       const nextRoute = deliveryOption === 'delivery' 
-        ? '/clients/DeliveryScreen' 
-        : '/clients/pickup-location';
+        ? '/clients/PaymentScreen' 
+        : '/clients/PaymentScreen';
       router.push(nextRoute);
     }
   };
