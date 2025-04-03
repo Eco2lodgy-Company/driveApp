@@ -41,6 +41,7 @@ const PaymentScreen = () => {
       try {
         // Récupération du token depuis AsyncStorage
         const userData = await AsyncStorage.getItem('user');
+        const panierId = await AsyncStorage.getItem('panier');
         const token = userData ? JSON.parse(userData).token : null;
         const userId = userData ? JSON.parse(userData).id : null;
         if (!token) {
@@ -79,10 +80,45 @@ const PaymentScreen = () => {
     fetchCartData();
   }, []);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (isFormValid) {
-      console.log('Payment processed:', { paymentMethod, cardNumber, expiryDate, cvv, cardHolder, total });
-      setShowSuccessModal(true); // Afficher le popup
+      try {
+        // Récupération des données nécessaires depuis AsyncStorage
+        const userData = await AsyncStorage.getItem('user');
+        const panierId = await AsyncStorage.getItem('panier');
+        const token = userData ? JSON.parse(userData).token : null;
+        const userId = userData ? JSON.parse(userData).id : null;
+
+        console.log("panier :", panierId, "USERid:",userId);
+  
+        if (!token || !userId || !panierId) {
+          console.error('Missing required data (token, userId, or panierId)');
+          return;
+        }
+  
+        // Construction de l'URL avec les paramètres
+        const url = `http://195.35.24.128:8081/api/commandes/client/new?idClient=${userId}&idPanier=${panierId}`;
+  
+        // Envoi de la requête à l'API
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        const result = await response.json();
+  
+        if (response.ok && result.status === 'success') {
+          console.log('Commande créée avec succès:', result);
+          setShowSuccessModal(true); // Afficher le popup de succès
+        } else {
+          console.error('Erreur lors de la création de la commande:', result);
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement du paiement:', error);
+      }
     } else {
       console.log('Formulaire invalide');
     }
