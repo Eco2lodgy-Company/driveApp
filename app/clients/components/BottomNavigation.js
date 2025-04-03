@@ -21,67 +21,67 @@ const BottomNavigation = () => {
 
   const [animations] = useState(navItems.map(() => new Animated.Value(1)));
 
-  // Récupérer les données utilisateur (token, ID, email) depuis AsyncStorage
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userToken = await AsyncStorage.getItem("user");
-        if (!userToken) {
-          console.error("Aucun token trouvé");
-          return;
-        }
+  // // Récupérer les données utilisateur (token, ID, email) depuis AsyncStorage
+  // useEffect(() => {
+  //   const fetchUserData = async () => {
+  //     try {
+  //       const userToken = await AsyncStorage.getItem("user");
+  //       if (!userToken) {
+  //         console.error("Aucun token trouvé");
+  //         return;
+  //       }
   
-        const { token, email, id } = JSON.parse(userToken);
-        setToken(token);
-        setUserId(id);
-        setUserEmail(email);
-      } catch (error) {
-        console.error("Erreur lors de la récupération du token :", error.message);
-      }
-    };
+  //       const { token, email, id } = JSON.parse(userToken);
+  //       setToken(token);
+  //       setUserId(id);
+  //       setUserEmail(email);
+  //     } catch (error) {
+  //       console.error("Erreur lors de la récupération du token :", error.message);
+  //     }
+  //   };
   
-    fetchUserData();
-  }, []);
+  //   fetchUserData();
+  // }, []);
 
-  // Fonction pour récupérer les données du panier
-  const fetchCartData = useCallback(async () => {
-    if (!userId || !token) return;
+  // // Fonction pour récupérer les données du panier
+  // const fetchCartData = useCallback(async () => {
+  //   if (!userId || !token) return;
   
-    try {
-      const response = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+  //   try {
+  //     const response = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
+  //       method: "GET",
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         "Content-Type": "application/json",
+  //       },
+  //     });
   
-      const result = await response.json();
+  //     const result = await response.json();
   
-      if (result.status === "success" && result.data) {
-        // Compter le nombre de paniers (éléments dans result.data)
-        const totalPaniers = result.data.length;
-        setCartCount(totalPaniers);
-      } else {
-        console.error("Erreur dans la réponse de l'API:", result.message);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des données du panier:", error);
-    }
-  }, [userId, token]);
+  //     if (result.status === "success" && result.data) {
+  //       // Compter le nombre de paniers (éléments dans result.data)
+  //       const totalPaniers = result.data.length;
+  //       setCartCount(totalPaniers);
+  //     } else {
+  //       console.error("Erreur dans la réponse de l'API:", result.message);
+  //     }
+  //   } catch (error) {
+  //     console.error("Erreur lors de la récupération des données du panier:", error);
+  //   }
+  // }, [userId, token]);
 
-  // Mise à jour périodique des données du panier
-  useEffect(() => {
-    fetchCartData(); // Appel initial
+  // // Mise à jour périodique des données du panier
+  // useEffect(() => {
+  //   fetchCartData(); // Appel initial
 
-    // Mettre à jour toutes les 5 secondes (ou ajuste selon tes besoins)
-    const interval = setInterval(() => {
-      fetchCartData();
-    }, 5000); // 5000ms = 5 secondes
+  //   // Mettre à jour toutes les 5 secondes (ou ajuste selon tes besoins)
+  //   const interval = setInterval(() => {
+  //     fetchCartData();
+  //   }, 5000); // 5000ms = 5 secondes
 
-    // Nettoyer l'intervalle quand le composant est démonté
-    return () => clearInterval(interval);
-  }, [fetchCartData]);
+  //   // Nettoyer l'intervalle quand le composant est démonté
+  //   return () => clearInterval(interval);
+  // }, [fetchCartData]);
 
   const handlePressIn = (index) => {
     Animated.spring(animations[index], {

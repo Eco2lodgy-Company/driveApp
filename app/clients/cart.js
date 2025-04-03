@@ -84,14 +84,22 @@ const PanierScreen = () => {
           },
         }
       );
-
+  
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
-
+  
       const data = await response.json();
       console.log("Articles récupérés :", data.data);
-
+  
+      // 🔥 Correction : Vérifier et enregistrer l'ID du panier
+      if (data.data.length > 0) {
+        await AsyncStorage.setItem("panier", data.data[0].id.toString());
+        console.log("ID du panier enregistré :", data.data[0].id);
+      } else {
+        console.log("Aucun panier trouvé");
+      }
+  
       const transformedArticles = data.data.map((panier) => ({
         id: panier.id.toString(),
         name: panier.produits[0]?.nom || "Produit inconnu",
@@ -100,7 +108,7 @@ const PanierScreen = () => {
         image: convertPathToUrl(panier.produits[0]?.imagePath) || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
         description: panier.produits[0]?.description || "Aucune description",
       }));
-
+  
       setArticles(transformedArticles);
     } catch (error) {
       console.error("Erreur lors de la récupération des données:", error);
@@ -109,6 +117,7 @@ const PanierScreen = () => {
       setIsLoading(false);
     }
   };
+  
 
   const updateQuantity = (id, quantity) => {
     const parsedQty = parseInt(quantity) || 1;
@@ -172,7 +181,7 @@ const PanierScreen = () => {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push('/clients/DeliveryScreen');
+      router.push('/clients/shippingOption');
       setOrderStatus('success');
     } catch (error) {
       setOrderStatus('error');

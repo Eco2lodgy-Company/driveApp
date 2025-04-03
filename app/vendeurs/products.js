@@ -37,6 +37,8 @@ const SellerProductsScreen = () => {
     const loadData = async () => {
       try {
         const userData = await AsyncStorage.getItem('user');
+        const LocalShopId = await AsyncStorage.getItem("Shop");
+
         const user = userData ? JSON.parse(userData) : null;
         const token = user?.token;
 
@@ -46,7 +48,7 @@ const SellerProductsScreen = () => {
           return;
         }
 
-        const response = await fetch('http://195.35.24.128:8081/api/products/findByShop/19?username=bazoum@gmail.com', {
+        const response = await fetch(`http://195.35.24.128:8081/api/products/findByShop/${LocalShopId}?username=${user.email}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

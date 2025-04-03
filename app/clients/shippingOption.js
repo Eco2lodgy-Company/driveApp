@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,27 +11,66 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DeliveryOptionScreen = () => {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
-  
-  // État pour l'option sélectionnée
   const [deliveryOption, setDeliveryOption] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Données fictives du panier (simplifiées pour l'exemple)
-  const cartItems = [
-    { id: '1', name: 'T-Shirt Black', price: 29.99, quantity: 1 },
-    { id: '2', name: 'Jeans Blue', price: 59.99, quantity: 2 },
-  ];
+  useEffect(() => {
+    const fetchCartData = async () => {
+      try {
+        // Récupération du token depuis AsyncStorage
+        const userData = await AsyncStorage.getItem('user');
+        const token = userData ? JSON.parse(userData).token : null;
+        const userId = userData ? JSON.parse(userData).id :null;
+
+        if (!token) {
+          console.error('No token found');
+          return;
+        }
+
+        const response = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          // Transformation des données pour correspondre au format attendu
+          const transformedItems = result.data.flatMap(panier => 
+            panier.produits.map(produit => ({
+              id: produit.id || panier.id.toString(),
+              name: produit.nom,
+              price: produit.prix,
+              quantity: produit.quantite,
+            }))
+          );
+          setCartItems(transformedItems);
+        }
+      } catch (error) {
+        console.error('Error fetching cart data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCartData();
+  }, []);
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const handleContinue = () => {
     if (deliveryOption) {
-      // Redirection selon l'option choisie
       const nextRoute = deliveryOption === 'delivery' 
-        ? '/clients/delivery-address' 
-        : '/clients/pickup-location';
+        ? '/clients/PaymentScreen' 
+        : '/clients/PaymentScreen';
       router.push(nextRoute);
     }
   };
@@ -61,19 +100,25 @@ const DeliveryOptionScreen = () => {
           Choisissez une option
         </Text>
 
-        {/* Récapitulatif du panier */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Votre panier</Text>
-          {cartItems.map(renderCartItem)}
-          <View style={[styles.totalContainer, styles.totalFinal]}>
-            <Text style={[styles.totalLabel, { fontWeight: 'bold' }]}>Total :</Text>
-            <Text style={[styles.totalValue, { fontWeight: 'bold', color: '#2ecc71' }]}>
-              ${subtotal.toFixed(2)}
-            </Text>
-          </View>
+          {loading ? (
+            <Text>Chargement du panier...</Text>
+          ) : cartItems.length > 0 ? (
+            <>
+              {cartItems.map(renderCartItem)}
+              <View style={[styles.totalContainer, styles.totalFinal]}>
+                <Text style={[styles.totalLabel, { fontWeight: 'bold' }]}>Total :</Text>
+                <Text style={[styles.totalValue, { fontWeight: 'bold', color: '#2ecc71' }]}>
+                  ${subtotal.toFixed(2)}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text>Votre panier est vide</Text>
+          )}
         </View>
 
-        {/* Options de livraison/retrait */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mode de réception</Text>
           <TouchableOpacity
@@ -116,7 +161,6 @@ const DeliveryOptionScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Note */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Information</Text>
           <Text style={styles.noteText}>
@@ -124,7 +168,6 @@ const DeliveryOptionScreen = () => {
           </Text>
         </View>
 
-        {/* Bouton continuer */}
         <TouchableOpacity 
           style={[styles.continueButton, !deliveryOption && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -147,25 +190,6 @@ const DeliveryOptionScreen = () => {
 
         <View style={styles.spacer} />
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        {[
-          { icon: 'home', label: 'Home', route: '/clients/home' },
-          { icon: 'search', label: 'Search', route: '/clients/shops' },
-          { icon: 'shopping-cart', label: 'Cart', route: '/clients/cart' },
-          { icon: 'user', label: 'Profile', route: '/clients/profile' },
-        ].map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={styles.navItem}
-            onPress={() => router.push(item.route)}
-          >
-            <Icon name={item.icon} size={24} color="#2ecc71" />
-            <Text style={styles.navText}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
     </SafeAreaView>
   );
 };
@@ -289,28 +313,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 50,
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    elevation: 5,
-  },
-  navItem: {
-    alignItems: 'center',
-    padding: 5,
-  },
-  navText: {
-    fontSize: 12,
-    color: '#2ecc71',
-    marginTop: 4,
   },
 });
 
