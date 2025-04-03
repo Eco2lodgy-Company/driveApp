@@ -102,43 +102,96 @@ const ProductScreen = () => {
   }, []);
 
   const handleAddToCart = async () => {
-    if (product) {
-        try {
-            const url = 'http://195.35.24.128:8081/api/paniers/client/new';
-            
-            
-            const data = {
-                produits: [{
-                    idProduit: product.id, // On suppose que product a un champ id
-                    quantite: 1,
-                    dateAjout: new Date().toISOString()
-                }],
-                clientId: userId
-            };
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/hal+json',
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log(`Added ${product.libelle} to cart`, result);
-            Alert.alert('Succès', `${product.libelle} a été ajouté au panier.`);
-            
-        } catch (error) {
-            console.error(`Erreur lors de l'ajout de ${product.libelle} au panier:`, error);
-        }
+    if (!product || !userId || !token) {
+      Alert.alert('Erreur', 'Informations utilisateur ou produit manquantes');
+      return;
     }
-};
+  
+    try {
+      // 1. Vérification du panier existant
+      const checkResponse = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/hal+json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+  
+      if (!checkResponse.ok) {
+        const errorText = await checkResponse.text();
+        throw new Error(`Erreur vérification panier: ${errorText}`);
+      }
+  
+      const cartData = await checkResponse.json();
+  
+      if (!cartData?.data || !Array.isArray(cartData.data)) {
+        throw new Error('Structure de réponse invalide');
+      }
+  
+      // 2. Création ou mise à jour du panier
+      if (cartData.data.length === 0) {
+        // Création nouveau panier
+        const createResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/new', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            produits: [{
+              idProduit: product.id,
+              quantite: 1,
+              dateAjout: new Date().toISOString()
+            }],
+            clientId: userId
+          })
+        });
+  
+        if (!createResponse.ok) {
+          const errorText = await createResponse.text();
+          throw new Error(`Erreur création: ${errorText}`);
+        }
+  
+        Alert.alert('Succès', `${product.libelle} ajouté à un nouveau panier`);
+      } else {
+        // Mise à jour panier existant (sans écraser les produits)
+        const existingCart = cartData.data[0];
+  
+        const updateData = {
+          id: existingCart.id, // ID du panier existant
+          produits: [{
+            idProduit: product.id,
+            quantite: 1,
+            dateAjout: new Date().toISOString()
+          }],
+          clientId: userId
+        };
+  
+        console.log('Données envoyées:', JSON.stringify(updateData, null, 2));
+  
+        const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(updateData)
+        });
+  
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text();
+          console.error('Réponse serveur:', errorText);
+          throw new Error(`Erreur mise à jour: ${errorText}`);
+        }
+  
+        Alert.alert('Succès', `${product.libelle} ajouté au panier`);
+      }
+    } catch (error) {
+      console.error('Erreur complète:', error);
+      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message}`);
+    }
+  };
+  
 
   const handleBackPress = () => {
     console.log("Back button pressed - Clic détecté !");
