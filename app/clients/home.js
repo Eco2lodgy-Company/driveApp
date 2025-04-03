@@ -58,7 +58,6 @@ const HomeScreen = () => {
     return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
   };
 
-  // Fetch des catégories avec token
   useEffect(() => {
     const fetchCategories = async () => {
       if (!userData || !userData.token) {
@@ -70,7 +69,7 @@ const HomeScreen = () => {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${userData.token}`, // Ajout du token
+            Authorization: `Bearer ${userData.token}`,
           },
         });
         if (!response.ok) {
@@ -89,12 +88,11 @@ const HomeScreen = () => {
         setCategories(["All"]);
       }
     };
-    if (userData) { // Attendre que userData soit disponible
+    if (userData) {
       fetchCategories();
     }
   }, [userData]);
 
-  // Fetch des publicités avec token et logs
   useEffect(() => {
     const fetchAds = async () => {
       if (!userData || !userData.token) {
@@ -115,16 +113,13 @@ const HomeScreen = () => {
         const data = await response.json();
         if (data.status === "success" && Array.isArray(data.data)) {
           const mappedAds = data.data.map(ad => {
-            console.log("Chemin brut depuis la base (mediaPath):", ad.mediaPath);
             const convertedUrl = convertAdsPathToUrl(ad.mediaPath);
-            console.log("URL après conversion:", convertedUrl);
             return {
               id: ad.id.toString(),
               image: convertedUrl,
             };
           });
           setAds(mappedAds);
-          console.log("Liste complète des publicités mappées:", mappedAds);
         } else {
           console.error("Format de données inattendu:", data);
           setAds([]);
@@ -249,35 +244,49 @@ const HomeScreen = () => {
       <TouchableOpacity
         style={styles.productContent}
         onPress={() => router.push(`/clients/ProductScreen?productId=${item.id}`)}
+        activeOpacity={0.8}
       >
-        <Image
-          source={{ uri: item.image || 'https://via.placeholder.com/150' }}
-          style={styles.productImage}
-          resizeMode="cover"
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.image || 'https://via.placeholder.com/150' }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+          <View style={styles.priceTag}>
+            <Text style={styles.priceTagText}>${item.price?.toFixed(2) || '0.00'}</Text>
+          </View>
+        </View>
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.productShop}>{item.shop}</Text>
-          <View style={styles.productFooter}>
-            <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
-            <TouchableOpacity
-              style={styles.addToCartButton}
-              onPress={() => console.log(`Ajouté ${item.name} au panier`)}
-            >
-              <Icon name="plus" size={16} color="#fff" />
-            </TouchableOpacity>
+          <View style={styles.shopContainer}>
+            <Icon name="shopping-bag" size={14} color="#6B7280" />
+            <Text style={styles.productShop} numberOfLines={1}>{item.shop}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.addToCartButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              console.log(`Ajouté ${item.name} au panier`);
+            }}
+            activeOpacity={0.7}
+          >
+            <Icon name="plus" size={16} color="#fff" />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </View>
   );
 
   const renderAdItem = ({ item }) => (
-    <TouchableOpacity style={styles.adContainer}>
+    <TouchableOpacity style={styles.adContainer} activeOpacity={0.8}>
       <Image
         source={{ uri: item.image }}
         style={[styles.adImage, { width: adWidth }]}
         resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
+        style={styles.adGradient}
       />
     </TouchableOpacity>
   );
@@ -286,6 +295,7 @@ const HomeScreen = () => {
     <TouchableOpacity
       style={[styles.filterButton, selectedCategory === item && styles.activeFilter]}
       onPress={() => setSelectedCategory(item)}
+      activeOpacity={0.7}
     >
       <Text style={selectedCategory === item ? styles.activeFilterText : styles.filterText}>
         {item}
@@ -343,6 +353,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={styles.notificationButton}
               onPress={() => router.push('/clients/notifications')}
+              activeOpacity={0.7}
             >
               <Icon name="bell" size={20} color="#111827" />
             </TouchableOpacity>
@@ -351,12 +362,25 @@ const HomeScreen = () => {
       </Animated.View>
 
       <Animated.View style={[styles.fixedContent, { opacity: fadeAnim }]}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher (produit, boutique...)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher (produit, boutique...)"
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => setSearchQuery('')}
+              style={styles.clearSearchButton}
+              activeOpacity={0.6}
+            >
+              <Icon name="x" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -375,7 +399,12 @@ const HomeScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Publicités</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Publicités</Text>
+          <TouchableOpacity activeOpacity={0.6}>
+            <Text style={styles.seeAllText}>Tout voir</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.adWrapper}>
           <FlatList
             ref={adFlatListRef}
@@ -389,9 +418,23 @@ const HomeScreen = () => {
             decelerationRate="fast"
             initialScrollIndex={0}
           />
+          <View style={styles.adPagination}>
+            {ads.map((_, index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.adPaginationDot,
+                  index === 0 && styles.adPaginationDotActive
+                ]} 
+              />
+            ))}
+          </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Articles</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Articles</Text>
+          <Text style={styles.productCount}>{filteredProducts.length} produits</Text>
+        </View>
         <FlatList
           data={filteredProducts}
           renderItem={renderProduct}
@@ -402,7 +445,11 @@ const HomeScreen = () => {
           contentContainerStyle={styles.listContent}
           scrollEnabled={false}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+            <View style={styles.emptyContainer}>
+              <Icon name="package" size={40} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+              <Text style={styles.emptySubtext}>Essayez de modifier vos filtres</Text>
+            </View>
           }
         />
       </ScrollView>
@@ -412,7 +459,6 @@ const HomeScreen = () => {
   );
 };
 
-// Styles inchangés
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
@@ -447,14 +493,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     backgroundColor: '#F9FAFB',
+    zIndex: 5,
   },
-  searchInput: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 16,
+    color: '#111827',
+  },
+  clearSearchButton: {
+    padding: 4,
   },
   scrollContainer: {
     flex: 1,
@@ -470,22 +532,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   filterButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginRight: 8,
-    minWidth: 70,
+    minWidth: 80,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   activeFilter: {
     backgroundColor: '#4CAF50',
     borderColor: '#4CAF50',
   },
   filterText: {
-    color: '#111827',
+    color: '#6B7280',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -494,16 +561,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 16,
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 8,
-    marginTop: 12,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  productCount: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   adWrapper: {
     width: '100%',
     overflow: 'hidden',
+    marginBottom: 8,
   },
   adListContainer: {
     paddingVertical: 8,
@@ -512,14 +594,44 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderRadius: 12,
     overflow: 'hidden',
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
   },
   adImage: {
-    height: 150,
+    height: 160,
+    borderRadius: 12,
+  },
+  adGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '30%',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  adPagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  adPaginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 3,
+  },
+  adPaginationDotActive: {
+    backgroundColor: '#4CAF50',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   listContent: {
     paddingBottom: 20,
@@ -530,58 +642,94 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 1,
-    marginBottom: 8,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   productContent: {
-    padding: 12,
+    flex: 1,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 1,
   },
   productImage: {
     width: '100%',
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 8,
+    height: '100%',
+  },
+  priceTag: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  priceTagText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   productInfo: {
-    flex: 1,
+    padding: 12,
+    paddingTop: 8,
   },
   productName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  shopContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   productShop: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 4,
-  },
-  productFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#10B981',
+    marginLeft: 4,
+    flex: 1,
   },
   addToCartButton: {
     backgroundColor: '#4CAF50',
     borderRadius: 12,
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'flex-end',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
   emptyText: {
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
-    marginTop: 20,
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  emptySubtext: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -591,17 +739,17 @@ const styles = StyleSheet.create({
   },
   loadingAnimation: {
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
     backgroundColor: '#fff',
-    borderRadius: 15,
-    elevation: 5,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
     color: '#6B7280',
     fontWeight: '500',
