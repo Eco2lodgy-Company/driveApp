@@ -22,18 +22,14 @@ const SellerDashboardScreen = () => {
   const headerAnim = useRef(new Animated.Value(0)).current;
   const { user } = useContext(AuthContext);
   const [userData, setUserData] = useState("");
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const stats = {
     totalSales: 2450.75,
     pendingOrders: 8,
     completedOrders: 42,
   };
-
-  const recentOrders = [
-    { id: 'ORD126', customer: 'Marie Dupont', total: 89.99, status: 'Pending', date: 'Aujourd’hui' },
-    { id: 'ORD127', customer: 'Pierre Leclerc', total: 34.99, status: 'Shipped', date: 'Hier' },
-    { id: 'ORD128', customer: 'Sophie Martin', total: 150.50, status: 'Completed', date: '14 mars' },
-  ];
 
   const notifications = [
     { id: '1', message: 'Commande #ORD126 reçue', time: '5 min', type: 'info' },
@@ -55,6 +51,7 @@ const SellerDashboardScreen = () => {
         const parsedData = JSON.parse(storedData);
         setUserData(parsedData);
         console.log("Données de l'utilisateur récupérées :", parsedData);
+        fetchRecentOrders(parsedData.id);
       } catch (error) {
         console.error("Erreur lors de la récupération du profil :", error);
       }
@@ -62,10 +59,56 @@ const SellerDashboardScreen = () => {
     fetchProfile();
   }, []);
 
+  const fetchRecentOrders = async (userId) => {
+    try {
+      const userData = await AsyncStorage.getItem("user");
+      const parsedUserData = JSON.parse(userData);
+      const token = parsedUserData.token;
+      const userId = parsedUserData.id;
+      
+      if (!token) throw new Error("Aucun token trouvé");
+
+      const response = await fetch(`http://195.35.24.128:8081/api/paniers/vendeur/liste/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la récupération des commandes");
+
+      const data = await response.json();
+      if (data.status === "success") {
+        // Prendre les 5 dernières commandes et formater les données
+        const lastFiveOrders = data.data.slice(0, 5).map(order => ({
+          id: order.id,
+          customer: order.clientNom,
+          total: order.produits.reduce((sum, produit) => sum + (produit.prix * produit.quantite), 0),
+          status: 'Pending', // Vous pouvez adapter ceci selon vos besoins
+          date: new Date(order.createdAt).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          }),
+          produits: order.produits // Conserver les produits pour les détails
+        }));
+        
+        setRecentOrders(lastFiveOrders);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des commandes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderOrder = ({ item }) => (
     <TouchableOpacity
       style={styles.orderCard}
-      onPress={() => router.push(`vendeurs/orderDetails?orderId=${item.id}`)}
+      onPress={() => router.push({
+        pathname: 'vendeurs/orderDetails',
+        params: { orderId: JSON.stringify(item.id) }
+      })}
     >
       <View style={styles.orderHeader}>
         <Text style={styles.orderId}>Commande #{item.id}</Text>
@@ -92,7 +135,7 @@ const SellerDashboardScreen = () => {
           <Text style={styles.orderText}>{item.date}</Text>
         </View>
       </View>
-      <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
+      <Text style={styles.orderTotal}>{item.total.toFixed(2)} €</Text>
     </TouchableOpacity>
   );
 
@@ -154,7 +197,7 @@ const SellerDashboardScreen = () => {
           <Text style={styles.sectionTitle}>Statistiques</Text>
           <View style={styles.statsContainer}>
             {[
-              { label: 'Ventes Totales', value: `$${stats.totalSales.toFixed(2)}`, icon: 'dollar-sign' },
+              { label: 'Ventes Totales', value: `${stats.totalSales.toFixed(2)} €`, icon: 'dollar-sign' },
               { label: 'En attente', value: stats.pendingOrders, icon: 'clock' },
               { label: 'Complétées', value: stats.completedOrders, icon: 'check-circle' },
             ].map((stat, index) => (
@@ -206,20 +249,28 @@ const SellerDashboardScreen = () => {
 
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <Text style={styles.sectionTitle}>Commandes Récentes</Text>
-          <FlatList
-            data={recentOrders}
-            renderItem={renderOrder}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.orderList}
-          />
-          <TouchableOpacity
-            style={styles.viewMoreButton}
-            onPress={() => router.push('vendeurs/orders')}
-          >
-            <Text style={styles.viewMoreText}>Voir toutes les commandes</Text>
-            <Icon name="chevron-right" size={16} color="#38A169" />
-          </TouchableOpacity>
+          {loading ? (
+            <Text style={styles.loadingText}>Chargement des commandes...</Text>
+          ) : recentOrders.length > 0 ? (
+            <>
+              <FlatList
+                data={recentOrders}
+                renderItem={renderOrder}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                contentContainerStyle={styles.orderList}
+              />
+              <TouchableOpacity
+                style={styles.viewMoreButton}
+                onPress={() => router.push('vendeurs/orders')}
+              >
+                <Text style={styles.viewMoreText}>Voir toutes les commandes</Text>
+                <Icon name="chevron-right" size={16} color="#38A169" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.noOrdersText}>Aucune commande récente</Text>
+          )}
         </Animated.View>
       </ScrollView>
       <BottomNavigation />
@@ -445,6 +496,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#38A169',
     marginRight: 4,
+  },
+  loadingText: {
+    textAlign: 'center',
+    color: '#718096',
+    padding: 16,
+  },
+  noOrdersText: {
+    textAlign: 'center',
+    color: '#718096',
+    padding: 16,
   },
 });
 
