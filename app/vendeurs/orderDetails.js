@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Animated,
+  Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,24 +21,70 @@ const OrderDetailsScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const [order, setOrder] = useState(null);
-
-  const mockOrder = {
-    id: orderId || 'ORD123456',
-    customer: 'Jean Dupont',
-    total: 149.97,
-    status: 'Pending',
-    date: '2025-03-26',
-    items: [
-      { id: '1', name: 'T-shirt Bleu', quantity: 2, price: 29.99 },
-      { id: '2', name: 'Jean Slim', quantity: 1, price: 59.99 },
-      { id: '3', name: 'Chaussettes x3', quantity: 3, price: 9.99 },
-    ],
-  };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      setOrder(mockOrder);
-    }, 500);
+    const fetchOrderDetails = async () => {
+      try {
+        setLoading(true);
+        const userData = await AsyncStorage.getItem('user');
+        const token  = JSON.parse(userData)?.token;
+        
+        if (!token) {
+          throw new Error('Utilisateur non authentifié');
+        }
+
+        const response = await fetch(
+          `http://195.35.24.128:8081/api/paniers/vendeur/findById/${orderId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Erreur réseau');
+        }
+
+        const result = await response.json();
+        
+        if (result.status !== 'success') {
+          throw new Error(result.message || 'Erreur lors de la récupération des données');
+        }
+
+        // Formater les données
+        const formattedOrder = {
+          id: result.data.id.toString(),
+          customer: result.data.clientNom,
+          email: result.data.clientEmail,
+          total: result.data.produits.reduce((sum, produit) => 
+            sum + (produit.prix * produit.quantite), 0),
+          status: 'Pending', // À adapter si vous avez un statut dans l'API
+          date: result.data.createdAt.split('T')[0],
+          items: result.data.produits.map(produit => ({
+            id: produit.idProduit.toString(),
+            name: produit.nom,
+            description: produit.description,
+            quantity: produit.quantite,
+            price: produit.prix,
+            imagePath: produit.imagePath,
+          })),
+        };
+
+        setOrder(formattedOrder);
+        setError(null);
+      } catch (err) {
+        console.error('Erreur lors de la récupération des détails:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
 
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -46,11 +94,14 @@ const OrderDetailsScreen = () => {
 
   const renderOrderItem = ({ item }) => (
     <View style={styles.itemCard}>
-      <View style={styles.itemIcon}>
-        <Icon name="package" size={18} color="#4A5568" />
-      </View>
+      <Image 
+        source={{ uri: `http://195.35.24.128:8081${item.imagePath}` }}
+        style={styles.itemImage}
+        resizeMode="cover"
+      />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemDescription}>{item.description}</Text>
         <Text style={styles.itemQuantity}>Quantité: {item.quantity}</Text>
       </View>
       <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
@@ -67,12 +118,23 @@ const OrderDetailsScreen = () => {
     setOrder((prevOrder) => ({ ...prevOrder, status: 'Shipped' }));
   };
 
-  if (!order) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
         <View style={styles.loadingContainer}>
           <Icon name="loader" size={24} color="#4A5568" />
           <Text style={styles.loadingText}>Chargement des détails...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <SafeAreaView style={styles.safeContainer}>
+        <View style={styles.loadingContainer}>
+          <Icon name="alert-circle" size={24} color="#EF4444" />
+          <Text style={styles.errorText}>Erreur: {error || 'Commande non trouvée'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -130,6 +192,7 @@ const OrderDetailsScreen = () => {
         <View style={styles.orderInfo}>
           {[
             { icon: 'user', label: 'Client', value: order.customer },
+            { icon: 'mail', label: 'Email', value: order.email },
             { icon: 'calendar', label: 'Date', value: order.date },
             { icon: 'dollar-sign', label: 'Total', value: `$${order.total.toFixed(2)}` },
           ].map((info, index) => (
@@ -312,13 +375,10 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  itemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EBF8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
+  itemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
     marginRight: 12,
   },
   itemDetails: {
@@ -328,6 +388,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1A202C',
+  },
+  itemDescription: {
+    fontSize: 13,
+    color: '#718096',
+    marginTop: 2,
   },
   itemQuantity: {
     fontSize: 13,
@@ -370,6 +435,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2D3748',
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
     marginTop: 8,
   },
 });
