@@ -24,6 +24,17 @@ const OrderDetailsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
+  const convertPathToUrl = (dbPath) => {
+    if (!dbPath || typeof dbPath !== "string") {
+      console.error("Chemin invalide:", dbPath);
+      return "";
+    }
+    const basePath = "/root/data/drive/products/";
+    const baseUrl = "http://alphatek.fr:8086/";
+    return dbPath.startsWith(basePath) ? dbPath.replace(basePath, baseUrl) : dbPath;
+  };
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
@@ -95,7 +106,7 @@ const OrderDetailsScreen = () => {
   const renderOrderItem = ({ item }) => (
     <View style={styles.itemCard}>
       <Image 
-        source={{ uri: `http://195.35.24.128:8081${item.imagePath}` }}
+        source={{ uri: `${convertPathToUrl(item.imagePath)}` }}
         style={styles.itemImage}
         resizeMode="cover"
       />
