@@ -29,8 +29,8 @@ const OrderDetailsScreen = () => {
     items: [
       { id: '1', name: 'T-shirt Bleu', quantity: 2, price: 29.99 },
       { id: '2', name: 'Jean Slim', quantity: 1, price: 59.99 },
-      { id: '3', name: 'Chaussettes x3', quantity: 3, price: 9.99 }
-    ]
+      { id: '3', name: 'Chaussettes x3', quantity: 3, price: 9.99 },
+    ],
   };
 
   useEffect(() => {
@@ -47,93 +47,100 @@ const OrderDetailsScreen = () => {
   const renderOrderItem = ({ item }) => (
     <View style={styles.itemCard}>
       <View style={styles.itemIcon}>
-        <Icon name="package" size={20} color="#6B7280" />
+        <Icon name="package" size={18} color="#4A5568" />
       </View>
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemQuantity}>Quantité: {item.quantity}</Text>
-        <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
       </View>
+      <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
     </View>
   );
 
   const handleValidate = () => {
     console.log('Commande validée:', orderId);
-    setOrder(prevOrder => ({
-      ...prevOrder,
-      status: 'Validated'
-    }));
+    setOrder((prevOrder) => ({ ...prevOrder, status: 'Validated' }));
   };
 
   const handleShip = () => {
     console.log('Commande marquée comme expédiée:', orderId);
-    setOrder(prevOrder => ({
-      ...prevOrder,
-      status: 'Shipped'
-    }));
+    setOrder((prevOrder) => ({ ...prevOrder, status: 'Shipped' }));
   };
 
   if (!order) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <Text style={styles.loadingText}>Chargement des détails...</Text>
+        <View style={styles.loadingContainer}>
+          <Icon name="loader" size={24} color="#4A5568" />
+          <Text style={styles.loadingText}>Chargement des détails...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Animated.View style={[styles.header, {
-        opacity: headerAnim,
-        transform: [{
-          translateY: headerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-20, 0],
-          }),
-        }],
-      }]}>
-        <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient colors={['#FFFFFF', 'rgba(255,255,255,0.9)']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Détails Commande #{order.id}</Text>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.push('vendeurs/orders')}
-            >
-              <Icon name="arrow-left" size={20} color="#111827" />
+            <TouchableOpacity style={styles.backButton} onPress={() => router.push('vendeurs/orders')}>
+              <Icon name="chevron-left" size={24} color="#4A5568" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Commande #{order.id}</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              order.status === 'Pending' && styles.statusPending,
+              order.status === 'Validated' && styles.statusValidated,
+              order.status === 'Shipped' && styles.statusShipped,
+              order.status === 'Completed' && styles.statusCompleted,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {order.status === 'Pending'
+                ? 'En attente'
+                : order.status === 'Validated'
+                ? 'Validée'
+                : order.status === 'Shipped'
+                ? 'Expédiée'
+                : 'Complétée'}
+            </Text>
           </View>
         </LinearGradient>
       </Animated.View>
 
       <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
         <View style={styles.orderInfo}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Client:</Text>
-            <Text style={styles.infoValue}>{order.customer}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date:</Text>
-            <Text style={styles.infoValue}>{order.date}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Statut:</Text>
-            <Text style={[styles.infoValue, styles.statusText, {
-              color: order.status === 'Pending' ? '#F1C40F' :
-                    order.status === 'Validated' ? '#8B5CF6' :
-                    order.status === 'Shipped' ? '#3498DB' : '#10B981'
-            }]}>
-              {order.status === 'Pending' ? 'En attente' :
-               order.status === 'Validated' ? 'Validée' :
-               order.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Total:</Text>
-            <Text style={styles.infoValue}>${order.total.toFixed(2)}</Text>
-          </View>
+          {[
+            { icon: 'user', label: 'Client', value: order.customer },
+            { icon: 'calendar', label: 'Date', value: order.date },
+            { icon: 'dollar-sign', label: 'Total', value: `$${order.total.toFixed(2)}` },
+          ].map((info, index) => (
+            <View key={index} style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <Icon name={info.icon} size={18} color="#4A5568" />
+              </View>
+              <Text style={styles.infoLabel}>{info.label}:</Text>
+              <Text style={styles.infoValue}>{info.value}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.itemsSection}>
@@ -142,25 +149,36 @@ const OrderDetailsScreen = () => {
             data={order.items}
             renderItem={renderOrderItem}
             keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={true}
-            style={styles.itemsList}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.itemsList}
           />
         </View>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+            style={[
+              styles.actionButton,
+              { backgroundColor: order.status === 'Pending' ? '#38A169' : '#E2E8F0' },
+            ]}
             onPress={handleValidate}
             disabled={order.status !== 'Pending'}
           >
-            <Text style={styles.actionButtonText}>Valider la commande</Text>
+            <Icon name="check" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+            <Text style={styles.actionButtonText}>Valider</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#3498DB' }]}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor:
+                  order.status === 'Validated' ? '#3182CE' : '#E2E8F0',
+              },
+            ]}
             onPress={handleShip}
             disabled={order.status === 'Pending' || order.status === 'Shipped'}
           >
-            <Text style={styles.actionButtonText}>Marquer comme expédié</Text>
+            <Icon name="truck" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+            <Text style={styles.actionButtonText}>Expédier</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -173,91 +191,132 @@ const OrderDetailsScreen = () => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    position: 'relative',
   },
   headerGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
   },
   backButton: {
     padding: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 10,
+    backgroundColor: '#EBF8FF',
+    borderRadius: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    flex: 1,
+    textAlign: 'center',
+  },
+  statusBadge: {
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  statusPending: { backgroundColor: '#FEFCBF' },
+  statusValidated: { backgroundColor: '#E9D8FD' },
+  statusShipped: { backgroundColor: '#BEE3F8' },
+  statusCompleted: { backgroundColor: '#C6F6D5' },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A202C',
   },
   contentContainer: {
     flex: 1,
-    padding: 16,
-    paddingBottom: 80, // Espace pour les boutons et la BottomNavigation
+    paddingHorizontal: 16,
+    paddingBottom: 80,
   },
   orderInfo: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EBF8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#718096',
+    marginRight: 8,
   },
   infoValue: {
-    fontSize: 14,
-    color: '#111827',
-  },
-  statusText: {
+    fontSize: 15,
     fontWeight: '600',
+    color: '#1A202C',
+    flex: 1,
   },
   itemsSection: {
     flex: 1,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
     marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   itemsList: {
-    maxHeight: 300, // Hauteur maximale pour la liste scrollable
+    paddingBottom: 8,
   },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   itemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EBF8FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -266,42 +325,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1A202C',
   },
   itemQuantity: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#718096',
     marginTop: 2,
   },
   itemPrice: {
-    fontSize: 12,
-    color: '#10B981',
-    marginTop: 2,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#38A169',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 20, // Espace supplémentaire en bas
+    gap: 12,
+    marginTop: 16,
   },
   actionButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+  },
+  buttonIcon: {
+    marginRight: 6,
   },
   actionButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   loadingText: {
-    textAlign: 'center',
-    color: '#6B7280',
     fontSize: 16,
-    marginTop: 50,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginTop: 8,
   },
 });
 
