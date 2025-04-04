@@ -75,17 +75,8 @@ const SellerProductsScreen = () => {
       }
 
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(headerAnim, {
-          toValue: 1,
-          tension: 60,
-          friction: 8,
-          useNativeDriver: true,
-        }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.spring(headerAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
       ]).start();
     };
 
@@ -103,74 +94,71 @@ const SellerProductsScreen = () => {
       onPress={() => router.push(`vendeurs/productDetails?productId=${item.id}`)}
       activeOpacity={0.7}
     >
-      <LinearGradient
-        colors={['#FFFFFF', '#FAFAFA']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.productGradient}
-      >
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.productImage}
-            resizeMode="contain"
-            defaultSource={{ uri: 'https://via.placeholder.com/60' }}
-          />
-        </View>
-        <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">
-            {item.name}
-          </Text>
-          <View style={styles.productDetails}>
-            <Text style={styles.productPrice}>{item.price.toLocaleString()} FCFA</Text>
-            <View style={[
-              styles.stockBadge,
-              { backgroundColor: item.stock > 10 ? '#ECFDF5' : '#FFF1F2' }
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.productImage}
+          resizeMode="contain"
+          defaultSource={{ uri: 'https://via.placeholder.com/60' }}
+        />
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">
+          {item.name}
+        </Text>
+        <View style={styles.productDetails}>
+          <Text style={styles.productPrice}>{item.price.toLocaleString()} FCFA</Text>
+          <View style={[
+            styles.stockBadge,
+            { backgroundColor: item.stock > 10 ? '#C6F6D5' : '#FEE2E2' }
+          ]}>
+            <Text style={[
+              styles.productStock,
+              { color: item.stock > 10 ? '#15803D' : '#B91C1C' }
             ]}>
-              <Text style={[
-                styles.productStock,
-                { color: item.stock > 10 ? '#15803D' : '#DC2626' }
-              ]}>
-                {item.stock} en stock
-              </Text>
-            </View>
+              {item.stock} en stock
+            </Text>
           </View>
-          <Text style={styles.productId}>Réf: #{item.id}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            router.push(`vendeurs/editProduct?productId=${item.id}`);
-          }}
-        >
-          <Icon name="edit-2" size={20} color="#4B5563" />
-        </TouchableOpacity>
-      </LinearGradient>
+        <Text style={styles.productId}>Réf: #{item.id}</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          router.push(`vendeurs/editProduct?productId=${item.id}`);
+        }}
+      >
+        <Icon name="edit-2" size={18} color="#4A5568" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Animated.View style={[styles.header, {
-        opacity: headerAnim,
-        transform: [{
-          translateY: headerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-30, 0],
-          }),
-        }],
-      }]}>
-        <LinearGradient
-          colors={['#FFFFFF', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-30, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient colors={['#FFFFFF', 'rgba(255,255,255,0.9)']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.push('/sellers/home')}
             >
-              <Icon name="chevron-left" size={28} color="#111827" />
+              <Icon name="chevron-left" size={24} color="#4A5568" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Mes Produits</Text>
             <TouchableOpacity
@@ -178,10 +166,10 @@ const SellerProductsScreen = () => {
               onPress={() => router.push('vendeurs/addProducts')}
             >
               <LinearGradient
-                colors={['#4CAF50', '#388E3C']}
+                colors={['#38A169', '#2F855A']}
                 style={styles.addButtonGradient}
               >
-                <Icon name="plus" size={24} color="#FFFFFF" />
+                <Icon name="plus" size={20} color="#FFFFFF" />
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -190,24 +178,25 @@ const SellerProductsScreen = () => {
 
       <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Icon name="search" size={18} color="#A0AEC0" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Rechercher un produit..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#A0AEC0"
           />
         </View>
 
         <View style={styles.section}>
           {loading ? (
             <View style={styles.loadingContainer}>
+              <Icon name="loader" size={24} color="#4A5568" />
               <Text style={styles.loadingText}>Chargement des produits...</Text>
             </View>
           ) : products.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Icon name="package" size={40} color="#9CA3AF" />
+              <Icon name="package" size={48} color="#CBD5E0" />
               <Text style={styles.emptyText}>Aucun produit disponible</Text>
             </View>
           ) : (
@@ -215,8 +204,8 @@ const SellerProductsScreen = () => {
               data={filteredProducts}
               renderItem={renderProduct}
               keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={true} // Activer l'indicateur de scroll pour confirmer le défilement
-              contentContainerStyle={[styles.listContent, { flexGrow: 1 }]} // Assurer que le contenu grandit
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
               ListHeaderComponent={
                 <Text style={styles.sectionTitle}>
                   {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} trouvé{filteredProducts.length !== 1 ? 's' : ''}
@@ -238,113 +227,111 @@ const SellerProductsScreen = () => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    paddingTop: 40,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   headerGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    letterSpacing: 0.2,
-  },
   backButton: {
-    padding: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 10,
+    padding: 8,
+    backgroundColor: '#EBF8FF',
+    borderRadius: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    flex: 1,
+    textAlign: 'center',
   },
   addButton: {
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   addButtonGradient: {
-    padding: 6,
-    borderRadius: 10,
-    width: 40,
-    height: 40,
+    padding: 8,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   contentContainer: {
-    flex: 1, // S'assurer que ce conteneur prend tout l'espace disponible
+    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 80,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: '#EBF8FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   searchIcon: {
-    marginLeft: 12,
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingRight: 12,
-    fontSize: 16,
-    color: '#111827',
+    height: 40,
+    fontSize: 15,
+    color: '#1A202C',
   },
   section: {
-    flex: 1, // Permettre à la section de prendre tout l'espace restant
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2D3748',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 12,
-    paddingHorizontal: 4,
   },
   productCard: {
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-  productGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     padding: 12,
+    marginBottom: 12,
   },
   imageContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    marginRight: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: '#EBF8FF',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
     overflow: 'hidden',
   },
   productImage: {
@@ -356,21 +343,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   productName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1A202C',
     marginBottom: 4,
   },
   productDetails: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   productPrice: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#16A34A',
+    fontWeight: '700',
+    color: '#38A169',
   },
   stockBadge: {
     paddingHorizontal: 8,
@@ -379,30 +366,30 @@ const styles = StyleSheet.create({
   },
   productStock: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   productId: {
     fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: '#718096',
   },
   actionButton: {
     padding: 8,
-    marginLeft: 8,
+    backgroundColor: '#EDF2F7',
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 40,
   },
   emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
     fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
     marginTop: 12,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -410,11 +397,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#6B7280',
     fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginTop: 8,
   },
   listContent: {
-    paddingBottom: 80, // Augmenter le paddingBottom pour s'assurer que le dernier élément est visible au-dessus de BottomNavigation
+    paddingBottom: 16,
   },
 });
 
