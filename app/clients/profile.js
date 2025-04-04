@@ -1,8 +1,7 @@
-import React, { useContext, useEffect, useState,useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -22,12 +21,10 @@ const ProfileScreen = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fonction pour récupérer le token et les données utilisateur
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
   
-      // Récupérer le token depuis AsyncStorage
       const userDataString = await AsyncStorage.getItem("user");
       if (!userDataString) {
         console.error("Aucun utilisateur trouvé dans le stockage");
@@ -61,14 +58,11 @@ const ProfileScreen = () => {
       const result = await response.json();
   
       if (result?.status === "succes" && result?.data) {
-        console.log(result.data);
         setUser({
           name: `${result.data.prenom} ${result.data.nom}`,
           email: result.data.email,
-          avatar:
-            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop", // Image par défaut
-          orders: 12, // Valeur fictive (à adapter)
-          favorites: 8, // Valeur fictive (à adapter)
+          orders: 12,
+          favorites: 8,
         });
       } else {
         console.error("Réponse API invalide:", result);
@@ -114,13 +108,12 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Section Avatar et Infos */}
+        {/* Section Header */}
         <Animated.View style={[styles.profileHeader, { opacity: fadeAnim }]}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            <TouchableOpacity style={styles.editIcon}>
-              <Icon name="edit-2" size={16} color="#fff" />
-            </TouchableOpacity>
+          <View style={styles.userInitialsContainer}>
+            <Text style={styles.userInitials}>
+              {user.name.split(' ').map(n => n[0]).join('')}
+            </Text>
           </View>
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userEmail}>{user.email}</Text>
@@ -129,24 +122,29 @@ const ProfileScreen = () => {
         {/* Statistiques */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Icon name="shopping-bag" size={24} color="#38A169" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#E6FFFA' }]}>
+              <Icon name="shopping-bag" size={20} color="#38A169" />
+            </View>
             <Text style={styles.statNumber}>{user.orders}</Text>
-            <Text style={styles.statLabel}>Orders</Text>
+            <Text style={styles.statLabel}>Commandes</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="heart" size={24} color="#DD6B20" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#FEEBC8' }]}>
+              <Icon name="heart" size={20} color="#DD6B20" />
+            </View>
             <Text style={styles.statNumber}>{user.favorites}</Text>
-            <Text style={styles.statLabel}>Favorites</Text>
+            <Text style={styles.statLabel}>Favoris</Text>
           </View>
         </View>
 
         {/* Options du menu */}
         <View style={styles.menuContainer}>
+          <Text style={styles.menuTitle}>Paramètres du compte</Text>
+          
           {[
-            { icon: 'user', label: 'Edit Profile', action: () => router.push('/clients/ProfileEditScreen') },
-            { icon: 'shopping-cart', label: 'My Orders', action: () => router.push('/clients/OrdersScreen') },
-            { icon: 'settings', label: 'Settings', action: () => console.log('Settings') },
-            { icon: 'help-circle', label: 'Help & Support', action: () => console.log('Help') },
+            { icon: 'user', label: 'Modifier le profil', action: () => router.push('/clients/ProfileEditScreen') },
+            { icon: 'shopping-cart', label: 'Mes commandes', action: () => router.push('/clients/OrdersScreen') },
+            { icon: 'credit-card', label: 'Moyens de paiement', action: () => console.log('Payment') },
           ].map((item, index) => (
             <TouchableOpacity
               key={index}
@@ -154,9 +152,32 @@ const ProfileScreen = () => {
               onPress={item.action}
               activeOpacity={0.7}
             >
-              <Icon name={item.icon} size={22} color="#2D3748" />
+              <View style={styles.menuIconContainer}>
+                <Icon name={item.icon} size={18} color="#4A5568" />
+              </View>
               <Text style={styles.menuText}>{item.label}</Text>
-              <Icon name="chevron-right" size={20} color="#718096" style={styles.chevron} />
+              <Icon name="chevron-right" size={18} color="#A0AEC0" />
+            </TouchableOpacity>
+          ))}
+
+          <Text style={[styles.menuTitle, { marginTop: 20 }]}>Assistance</Text>
+          
+          {[
+            { icon: 'settings', label: 'Paramètres', action: () => console.log('Settings') },
+            { icon: 'help-circle', label: 'Aide & Support', action: () => console.log('Help') },
+            { icon: 'info', label: 'À propos', action: () => console.log('About') },
+          ].map((item, index) => (
+            <TouchableOpacity
+              key={index + 3}
+              style={styles.menuItem}
+              onPress={item.action}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuIconContainer}>
+                <Icon name={item.icon} size={18} color="#4A5568" />
+              </View>
+              <Text style={styles.menuText}>{item.label}</Text>
+              <Icon name="chevron-right" size={18} color="#A0AEC0" />
             </TouchableOpacity>
           ))}
         </View>
@@ -167,8 +188,7 @@ const ProfileScreen = () => {
           onPress={handleLogout}
           activeOpacity={0.8}
         >
-          <Text style={styles.logoutText}>Logout</Text>
-          <Icon name="log-out" size={20} color="#fff" />
+          <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>
       </ScrollView>
       <BottomNavigation />
@@ -179,120 +199,127 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   profileHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    marginTop: 16,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 15,
+  userInitialsContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#4299E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  editIcon: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#38A169',
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 2,
-    borderColor: '#fff',
+  userInitials: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   userName: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#2D3436',
+    color: '#1A202C',
+    marginBottom: 4,
   },
   userEmail: {
-    fontSize: 16,
-    color: '#718096',
-    marginTop: 5,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 25,
-  },
-  statCard: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 15,
-    width: '45%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2D3436',
-    marginVertical: 5,
-  },
-  statLabel: {
     fontSize: 14,
     color: '#718096',
   },
-  menuContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    paddingVertical: 10,
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    width: '48%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#718096',
+  },
+  menuContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  menuTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#718096',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+  },
+  menuIconContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 12,
   },
   menuText: {
-    fontSize: 16,
-    color: '#2D3436',
-    marginLeft: 15,
+    fontSize: 15,
+    color: '#2D3748',
     flex: 1,
   },
-  chevron: {
-    marginLeft: 'auto',
-  },
   logoutButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DD6B20',
-    borderRadius: 30,
-    paddingVertical: 15,
-    marginTop: 30,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#E53E3E',
   },
   logoutText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#E53E3E',
+    fontSize: 15,
     fontWeight: '600',
-    marginRight: 10,
   },
 });
 

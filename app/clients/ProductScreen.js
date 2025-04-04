@@ -108,6 +108,7 @@ const ProductScreen = () => {
     }
   
     try {
+      // Vérification du panier existant
       const checkResponse = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userId}`, {
         method: 'GET',
         headers: {
@@ -122,12 +123,14 @@ const ProductScreen = () => {
       }
   
       const cartData = await checkResponse.json();
+      console.log('Réponse complète de l\'API liste:', JSON.stringify(cartData, null, 2));
   
       if (!cartData?.data || !Array.isArray(cartData.data)) {
         throw new Error('Structure de réponse invalide');
       }
   
       if (cartData.data.length === 0) {
+        // Création d'un nouveau panier
         const createResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/new', {
           method: 'POST',
           headers: {
@@ -151,17 +154,49 @@ const ProductScreen = () => {
   
         Alert.alert('Succès', `${product.libelle} ajouté à un nouveau panier`);
       } else {
+        // Mise à jour du panier existant
         const existingCart = cartData.data[0];
-  
-        const updateData = {
-          id: existingCart.id,
-          produits: [{
+        console.log('Panier existant extrait:', JSON.stringify(existingCart, null, 2));
+        
+        // Récupération et filtrage des produits existants
+        const existingProductsRaw = existingCart.produits || [];
+        const existingProducts = existingProductsRaw.map(product => ({
+          idProduit: product.idProduit,
+          quantite: product.quantite,
+          dateAjout: product.dateAjout
+        }));
+        
+        // Vérifier si le produit existe déjà
+        const productIndex = existingProducts.findIndex(p => p.idProduit === product.id);
+        
+        let updatedProducts;
+        if (productIndex >= 0) {
+          // Si le produit existe, incrémenter la quantité
+          updatedProducts = existingProducts.map((p, index) => 
+            index === productIndex 
+              ? { ...p, quantite: p.quantite + quantity }
+              : p
+          );
+        } else {
+          // Si le produit n'existe pas, l'ajouter
+          const newProduct = {
             idProduit: product.id,
             quantite: quantity,
             dateAjout: new Date().toISOString()
-          }],
+          };
+          updatedProducts = [...existingProducts, newProduct];
+        }
+        
+        console.log('Liste des produits mise à jour:', JSON.stringify(updatedProducts, null, 2));
+        
+        // Données pour la mise à jour
+        const updateData = {
+          id: existingCart.id,
+          produits: updatedProducts,
           clientId: userId
         };
+  
+        console.log('Données envoyées à l\'API de mise à jour:', JSON.stringify(updateData, null, 2));
   
         const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
           method: 'PUT',
@@ -172,20 +207,21 @@ const ProductScreen = () => {
           body: JSON.stringify(updateData)
         });
   
+        const updateResponseText = await updateResponse.text();
+        console.log('Réponse de l\'API après mise à jour:', updateResponseText);
+  
         if (!updateResponse.ok) {
-          const errorText = await updateResponse.text();
-          console.error('Réponse serveur:', errorText);
-          throw new Error(`Erreur mise à jour: ${errorText}`);
+          throw new Error(`Erreur mise à jour: ${updateResponseText}`);
         }
   
         Alert.alert('Succès', `${product.libelle} ajouté au panier`);
-        console.log(`le produit: ${product.libelle} a ete ajouter au panier avec succes `);
+        console.log(`Produit ${product.libelle} ajouté au panier avec succès`);
       }
     } catch (error) {
       console.error('Erreur complète:', error);
-      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message}`);
+      Alert.alert('Erreur', `Échec de l\'ajout au panier: ${error.message}`);
     }
-  };
+};
 
   const handleBackPress = () => {
     router.back();

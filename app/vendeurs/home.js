@@ -14,26 +14,22 @@ import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
+import BottomNavigation from './components/BottomNavigation';
 
 const SellerDashboardScreen = () => {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const { user } = useContext(AuthContext);
-  const [userData,setUserData] = useState("");
+  const [userData, setUserData] = useState("");
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const stats = {
     totalSales: 2450.75,
     pendingOrders: 8,
     completedOrders: 42,
   };
-
-  const recentOrders = [
-    { id: 'ORD126', customer: 'Marie Dupont', total: 89.99, status: 'Pending', date: 'Aujourd’hui' },
-    { id: 'ORD127', customer: 'Pierre Leclerc', total: 34.99, status: 'Shipped', date: 'Hier' },
-    { id: 'ORD128', customer: 'Sophie Martin', total: 150.50, status: 'Completed', date: '14 mars' },
-  ];
 
   const notifications = [
     { id: '1', message: 'Commande #ORD126 reçue', time: '5 min', type: 'info' },
@@ -42,90 +38,119 @@ const SellerDashboardScreen = () => {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(headerAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(headerAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
     ]).start();
   }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const storedData = await AsyncStorage.getItem("user"); // Récupération du token
-        if (!storedData) {
-          console.error("Aucun token trouvé !");
-          return;
-        }
-
-        let Data;
-        try {
-          Data = JSON.parse(storedData); // Convertir en JSON
-          setUserData(Data);
-        } catch (error) {
-          console.error("Erreur lors de l'analyse du JSON :", error);
-          return;
-        }
-
-        if (!Data.email || !Data.token) {
-          console.error("Données du token incomplètes !");
-          return;
-        }
-
-        console.log("Données de l'utilisateur récupérées :", Data);
-
-        // Ajoute ici la logique pour utiliser Data (ex: requête API)
-
+        const storedData = await AsyncStorage.getItem("user");
+        if (!storedData) throw new Error("Aucun token trouvé");
+        const parsedData = JSON.parse(storedData);
+        setUserData(parsedData);
+        console.log("Données de l'utilisateur récupérées :", parsedData);
+        fetchRecentOrders(parsedData.id);
       } catch (error) {
         console.error("Erreur lors de la récupération du profil :", error);
       }
     };
+    fetchProfile();
+  }, []);
 
-    fetchProfile(); // Appel de la fonction
-  }, []); // Dépendance vide → exécution au montage
-  
+  const fetchRecentOrders = async (userId) => {
+    try {
+      const userData = await AsyncStorage.getItem("user");
+      const parsedUserData = JSON.parse(userData);
+      const token = parsedUserData.token;
+      const userId = parsedUserData.id;
+      
+      if (!token) throw new Error("Aucun token trouvé");
+
+      const response = await fetch(`http://195.35.24.128:8081/api/paniers/vendeur/liste/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la récupération des commandes");
+
+      const data = await response.json();
+      if (data.status === "success") {
+        // Prendre les 5 dernières commandes et formater les données
+        const lastFiveOrders = data.data.slice(0, 5).map(order => ({
+          id: order.id,
+          customer: order.clientNom,
+          total: order.produits.reduce((sum, produit) => sum + (produit.prix * produit.quantite), 0),
+          status: 'Pending', // Vous pouvez adapter ceci selon vos besoins
+          date: new Date(order.createdAt).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          }),
+          produits: order.produits // Conserver les produits pour les détails
+        }));
+        
+        setRecentOrders(lastFiveOrders);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des commandes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderOrder = ({ item }) => (
-    <View style={styles.orderCard}>
-      <View style={styles.orderIcon}>
-        <Icon name="package" size={20} color="#6B7280" />
+    <TouchableOpacity
+      style={styles.orderCard}
+      onPress={() => router.push({
+        pathname: 'vendeurs/orderDetails',
+        params: { orderId: JSON.stringify(item.id) }
+      })}
+    >
+      <View style={styles.orderHeader}>
+        <Text style={styles.orderId}>Commande #{item.id}</Text>
+        <View
+          style={[
+            styles.statusBadge,
+            item.status === 'Pending' && styles.statusPending,
+            item.status === 'Shipped' && styles.statusShipped,
+            item.status === 'Completed' && styles.statusCompleted,
+          ]}
+        >
+          <Text style={styles.statusText}>
+            {item.status === 'Pending' ? 'En attente' : item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
+          </Text>
+        </View>
       </View>
-      <TouchableOpacity
-        style={styles.orderDetails}
-        onPress={() => router.push(`vendeurs/orderDetails?orderId=${item.id}`)}
-      >
-        <Text style={styles.orderId}>#{item.id}</Text>
-        <Text style={styles.orderCustomer}>{item.customer}</Text>
-        <Text style={styles.orderDate}>{item.date}</Text>
-        <Text style={[
-          styles.orderStatus,
-          { 
-            color: item.status === 'Pending' ? '#F1C40F' : 
-                  item.status === 'Shipped' ? '#3498DB' : '#10B981'
-          }
-        ]}>
-          {item.status === 'Pending' ? 'En attente' : 
-           item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
-        </Text>
-        <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.orderBody}>
+        <View style={styles.orderInfo}>
+          <Icon name="user" size={18} color="#4A5568" style={styles.orderIcon} />
+          <Text style={styles.orderText}>{item.customer}</Text>
+        </View>
+        <View style={styles.orderInfo}>
+          <Icon name="calendar" size={18} color="#4A5568" style={styles.orderIcon} />
+          <Text style={styles.orderText}>{item.date}</Text>
+        </View>
+      </View>
+      <Text style={styles.orderTotal}>{item.total.toFixed(2)} €</Text>
+    </TouchableOpacity>
   );
 
   const renderNotification = ({ item }) => (
     <View style={styles.notificationCard}>
-      <View style={styles.notificationIcon}>
-        <Icon 
-          name={item.type === 'info' ? 'info' : 'alert-triangle'} 
-          size={20} 
-          color={item.type === 'info' ? '#3B82F6' : '#F59E0B'} 
+      <View
+        style={[
+          styles.notificationIcon,
+          { backgroundColor: item.type === 'info' ? '#DBEAFE' : '#FEF3C7' },
+        ]}
+      >
+        <Icon
+          name={item.type === 'info' ? 'info' : 'alert-triangle'}
+          size={18}
+          color={item.type === 'info' ? '#3B82F6' : '#D97706'}
         />
       </View>
       <View style={styles.notificationDetails}>
@@ -137,51 +162,53 @@ const SellerDashboardScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Animated.View style={[styles.header, {
-        opacity: headerAnim,
-        transform: [{
-          translateY: headerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-20, 0],
-          }),
-        }],
-      }]}>
-        <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient colors={['#FFFFFF', 'rgba(255,255,255,0.9)']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Tableau de bord</Text>
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => router.push('vendeurs/profile')}
-            >
-              <Icon name="user" size={20} color="#111827" />
+            <TouchableOpacity style={styles.profileButton} onPress={() => router.push('vendeurs/profile')}>
+              <Icon name="user" size={24} color="#4A5568" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Tableau de bord</Text>
+            <View style={{ width: 24 }} />
           </View>
-          <Text style={styles.headerSubtitle}>{userData.nom || 'vide'}  {userData.prenom || 'vide'}</Text>
+          <Text style={styles.headerSubtitle}>
+            {userData.nom || 'Vendeur'} {userData.prenom || ''}
+          </Text>
         </LinearGradient>
       </Animated.View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <Text style={styles.sectionTitle}>Statistiques</Text>
           <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>${stats.totalSales.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>Ventes Totales</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.pendingOrders}</Text>
-              <Text style={styles.statLabel}>En attente</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.completedOrders}</Text>
-              <Text style={styles.statLabel}>Complétées</Text>
-            </View>
+            {[
+              { label: 'Ventes Totales', value: `${stats.totalSales.toFixed(2)} €`, icon: 'dollar-sign' },
+              { label: 'En attente', value: stats.pendingOrders, icon: 'clock' },
+              { label: 'Complétées', value: stats.completedOrders, icon: 'check-circle' },
+            ].map((stat, index) => (
+              <View key={index} style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Icon name={stat.icon} size={20} color="#4A5568" />
+                </View>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
         </Animated.View>
 
@@ -192,18 +219,18 @@ const SellerDashboardScreen = () => {
               style={styles.actionButton}
               onPress={() => router.push('vendeurs/addProducts')}
             >
-              <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.actionGradient}>
-                <Icon name="plus" size={20} color="#fff" />
-                <Text style={styles.actionText}>Produit</Text>
+              <LinearGradient colors={['#38A169', '#2F855A']} style={styles.actionGradient}>
+                <Icon name="plus" size={20} color="#FFFFFF" style={styles.actionIcon} />
+                <Text style={styles.actionText}>Ajouter Produit</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => router.push('vendeurs/orders')}
             >
-              <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.actionGradient}>
-                <Icon name="package" size={20} color="#fff" />
-                <Text style={styles.actionText}>Commandes</Text>
+              <LinearGradient colors={['#3182CE', '#2B6CB0']} style={styles.actionGradient}>
+                <Icon name="package" size={20} color="#FFFFFF" style={styles.actionIcon} />
+                <Text style={styles.actionText}>Voir Commandes</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -216,26 +243,37 @@ const SellerDashboardScreen = () => {
             renderItem={renderNotification}
             keyExtractor={(item) => item.id}
             scrollEnabled={false}
+            contentContainerStyle={styles.notificationList}
           />
         </Animated.View>
 
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <Text style={styles.sectionTitle}>Commandes Récentes</Text>
-          <FlatList
-            data={recentOrders}
-            renderItem={renderOrder}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-          <TouchableOpacity
-            style={styles.viewMoreButton}
-            onPress={() => router.push('/sellers/orders')}
-          >
-            <Text style={styles.viewMoreText}>Voir plus</Text>
-          </TouchableOpacity>
+          {loading ? (
+            <Text style={styles.loadingText}>Chargement des commandes...</Text>
+          ) : recentOrders.length > 0 ? (
+            <>
+              <FlatList
+                data={recentOrders}
+                renderItem={renderOrder}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                contentContainerStyle={styles.orderList}
+              />
+              <TouchableOpacity
+                style={styles.viewMoreButton}
+                onPress={() => router.push('vendeurs/orders')}
+              >
+                <Text style={styles.viewMoreText}>Voir toutes les commandes</Text>
+                <Icon name="chevron-right" size={16} color="#38A169" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.noOrdersText}>Aucune commande récente</Text>
+          )}
         </Animated.View>
       </ScrollView>
-      <BottomNavigation /> {/* Composant ajouté */}
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -243,78 +281,104 @@ const SellerDashboardScreen = () => {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   headerGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
+    justifyContent: 'space-between',
   },
   profileButton: {
     padding: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 10,
+    backgroundColor: '#EBF8FF',
+    borderRadius: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#718096',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 8,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 80, // Ajusté pour BottomNavigation
+    paddingHorizontal: 16,
+    paddingBottom: 80,
   },
   section: {
     marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 12,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     alignItems: 'center',
   },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EBF8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#10B981',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A202C',
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#718096',
     marginTop: 4,
+    textTransform: 'uppercase',
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
   actionButton: {
     flex: 1,
@@ -325,28 +389,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
+    padding: 12,
+  },
+  actionIcon: {
+    marginRight: 8,
   },
   actionText: {
-    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 8,
+    color: '#FFFFFF',
+  },
+  notificationList: {
+    paddingBottom: 4,
   },
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -355,70 +422,90 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1A202C',
   },
   notificationTime: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: 13,
+    color: '#718096',
     marginTop: 2,
+  },
+  orderList: {
+    paddingBottom: 8,
   },
   orderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  orderIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  orderDetails: {
-    flex: 1,
+    marginBottom: 8,
   },
   orderId: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A202C',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusPending: { backgroundColor: '#FEFCBF' },
+  statusShipped: { backgroundColor: '#BEE3F8' },
+  statusCompleted: { backgroundColor: '#C6F6D5' },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A202C',
+  },
+  orderBody: {
+    marginBottom: 8,
+  },
+  orderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  orderIcon: {
+    marginRight: 10,
+  },
+  orderText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  orderCustomer: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  orderDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  orderStatus: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+    color: '#4A5568',
   },
   orderTotal: {
-    fontSize: 12,
-    color: '#10B981',
-    marginTop: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#38A169',
+    textAlign: 'right',
   },
   viewMoreButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
   },
   viewMoreText: {
     fontSize: 14,
-    color: '#4CAF50',
     fontWeight: '600',
+    color: '#38A169',
+    marginRight: 4,
+  },
+  loadingText: {
+    textAlign: 'center',
+    color: '#718096',
+    padding: 16,
+  },
+  noOrdersText: {
+    textAlign: 'center',
+    color: '#718096',
+    padding: 16,
   },
 });
 

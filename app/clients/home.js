@@ -66,6 +66,7 @@ const HomeScreen = () => {
     }
 
     try {
+      // 1. Vérifier si l'utilisateur a déjà un panier
       const checkResponse = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userData.id}`, {
         method: 'GET',
         headers: {
@@ -80,12 +81,16 @@ const HomeScreen = () => {
       }
 
       const cartData = await checkResponse.json();
+      console.log('Réponse panier:', cartData);
 
+      // 2. Vérifier la structure de la réponse
       if (!cartData?.data || !Array.isArray(cartData.data)) {
         throw new Error('Structure de réponse invalide');
       }
 
+      // 3. Gérer selon qu'il y a un panier existant ou non
       if (cartData.data.length === 0) {
+        // Cas 1: Créer un nouveau panier
         const createResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/new', {
           method: 'POST',
           headers: {
@@ -104,47 +109,74 @@ const HomeScreen = () => {
 
         if (!createResponse.ok) {
           const errorText = await createResponse.text();
-          throw new Error(`Erreur création: ${errorText}`);
+          throw new Error(`Erreur création panier: ${errorText}`);
         }
 
         Alert.alert('Succès', `${product.name} ajouté à un nouveau panier`);
       } else {
+        // Cas 2: Mettre à jour le panier existant
         const existingCart = cartData.data[0];
+        
+        // Normaliser les produits (certaines API renvoient parfois des structures différentes)
+        const existingProducts = Array.isArray(existingCart.produits) 
+          ? existingCart.produits.map(p => ({
+              idProduit: p.idProduit || p.id,
+              quantite: p.quantite || 0,
+              dateAjout: p.dateAjout || new Date().toISOString()
+            }))
+          : [];
 
-        const updateData = {
-          id: existingCart.id,
-          produits: [{
-            idProduit: product.id,
-            quantite: quantity,
-            dateAjout: new Date().toISOString()
-          }],
-          clientId: userData.id
-        };
+        // Vérifier si le produit existe déjà
+        const existingProductIndex = existingProducts.findIndex(
+          p => p.idProduit.toString() === product.id.toString()
+        );
 
+        let updatedProducts;
+        if (existingProductIndex >= 0) {
+          // Produit existe déjà - mettre à jour la quantité
+          updatedProducts = existingProducts.map((p, index) => 
+            index === existingProductIndex
+              ? { ...p, quantite: (parseInt(p.quantite) + parseInt(quantity)) }
+              : p
+          );
+        } else {
+          // Nouveau produit - l'ajouter
+          updatedProducts = [
+            ...existingProducts,
+            {
+              idProduit: product.id,
+              quantite: quantity,
+              dateAjout: new Date().toISOString()
+            }
+          ];
+        }
+
+        // Envoyer la mise à jour
         const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${userData.token}`,
           },
-          body: JSON.stringify(updateData)
+          body: JSON.stringify({
+            id: existingCart.id,
+            produits: updatedProducts,
+            clientId: userData.id
+          })
         });
 
         if (!updateResponse.ok) {
           const errorText = await updateResponse.text();
-          console.error('Réponse serveur:', errorText);
-          throw new Error(`Erreur mise à jour: ${errorText}`);
+          throw new Error(`Erreur mise à jour panier: ${errorText}`);
         }
 
         Alert.alert('Succès', `${product.name} ajouté au panier`);
-        console.log(`le produit: ${product.name} a été ajouté au panier avec succès`);
       }
     } catch (error) {
-      console.error('Erreur complète:', error);
-      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message}`);
+      console.error('Erreur handleAddToCart:', error);
+      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message || error}`);
     }
-  };
-
+};
   useEffect(() => {
     const fetchCategories = async () => {
       if (!userData || !userData.token) {

@@ -8,7 +8,9 @@ import {
   SafeAreaView,
   Animated,
   TextInput,
+  ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -22,25 +24,55 @@ const SellerOrdersScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('toutes');
   const [searchQuery, setSearchQuery] = useState('');
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('http://195.35.24.128:8081/api/commandes/liste');
-        const data = await response.json();
+        // Récupérer le userId et le token depuis AsyncStorage
+        const userData = await AsyncStorage.getItem('user');
+        const userId = userData ? JSON.parse(userData).id : null;
+        const token = userData ? JSON.parse(userData).token : null;
 
-        const formattedOrders = data.map(order => ({
-          id: order.id || `ORD${Math.random().toString(36).substr(2, 9)}`,
-          customer: order.customer || 'Client inconnu',
-          total: order.total || 0,
-          status: order.status || 'Pending',
-          date: order.date || new Date().toISOString().split('T')[0],
-        }));
+        if (!userId || !token) {
+          throw new Error('Utilisateur non authentifié');
+        }
+
+        const response = await fetch(
+          `http://195.35.24.128:8081/api/paniers/vendeur/liste/${userId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Erreur réseau');
+        }
+
+        const result = await response.json();
         
+        if (result.status !== 'success') {
+          throw new Error(result.message || 'Erreur lors de la récupération des données');
+        }
+
+        const formattedOrders = result.data.map(order => ({
+          id: order.id.toString(),
+          customer: order.clientNom || 'Client inconnu',
+          total: order.produits.reduce((sum, produit) => 
+            sum + (produit.prix * produit.quantite), 0),
+          status: 'Pending', // À adapter si vous avez un champ status
+          date: order.createdAt.split('T')[0],
+        }));
+
         setOrders(formattedOrders);
+        setFetchError(false);
       } catch (err) {
         console.error('Erreur lors de la récupération des commandes:', err);
         setOrders([]);
+        setFetchError(true);
       } finally {
         setLoading(false);
       }
@@ -75,42 +107,48 @@ const SellerOrdersScreen = () => {
   });
 
   const renderOrder = ({ item }) => (
-    <View style={styles.orderCard}>
-      <View style={styles.orderIcon}>
-        <Icon name="shopping-bag" size={20} color="#6B7280" />
-      </View>
-      <TouchableOpacity
-        style={styles.orderDetails}
-        onPress={() => router.push(`vendeurs/orderDetails?orderId=${item.id}`)}
-      >
-        <Text style={styles.orderId}>#{item.id}</Text>
-        <Text style={styles.orderCustomer}>{item.customer}</Text>
-        <Text style={styles.orderDate}>{item.date}</Text>
-        <Text style={[
-          styles.orderStatus,
-          { 
-            color: item.status === 'Pending' ? '#F1C40F' : 
-                  item.status === 'Shipped' ? '#3498DB' : '#10B981'
-          }
+    <TouchableOpacity
+      style={styles.orderCard}
+      onPress={() => router.push(`vendeurs/orderDetails?orderId=${item.id}`)}
+    >
+      <View style={styles.orderHeader}>
+        <Text style={styles.orderId}>Commande #{item.id}</Text>
+        <View style={[
+          styles.statusBadge,
+          item.status === 'Pending' && styles.statusPending,
+          item.status === 'Shipped' && styles.statusShipped,
+          item.status === 'Completed' && styles.statusCompleted,
         ]}>
-          {item.status === 'Pending' ? 'En attente' : 
-           item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
-        </Text>
+          <Text style={styles.statusText}>
+            {item.status === 'Pending' ? 'En attente' : 
+             item.status === 'Shipped' ? 'Expédiée' : 'Complétée'}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.orderBody}>
+        {[
+          { icon: 'user', value: item.customer },
+          { icon: 'calendar', value: item.date },
+        ].map((info, index) => (
+          <View key={index} style={styles.orderInfo}>
+            <View style={styles.infoIconContainer}>
+              <Icon name={info.icon} size={18} color="#4A5568" />
+            </View>
+            <Text style={styles.orderText}>{info.value}</Text>
+          </View>
+        ))}
+      </View>
+      
+      <View style={styles.orderFooter}>
+        <Text style={styles.totalLabel}>Total</Text>
         <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+    </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeContainer}>
-        <Text style={styles.loadingText}>Chargement des commandes...</Text>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, {
         opacity: headerAnim,
         transform: [{
@@ -120,210 +158,330 @@ const SellerOrdersScreen = () => {
           }),
         }],
       }]}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.push('vendeurs/home')}
+          >
+            <Icon name="chevron-left" size={24} color="#4A5568" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Commandes</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Commandes</Text>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.push('/sellers/home')}
-            >
-              <Icon name="arrow-left" size={20} color="#111827" />
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+          colors={['rgba(0,0,0,0.1)', 'transparent']}
+          style={styles.headerOverlay}
+        />
       </Animated.View>
 
-      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher (ID, client...)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-
-        <View style={styles.filterButtons}>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'toutes' && styles.activeFilter]}
-            onPress={() => setFilter('toutes')}
-          >
-            <Text style={styles.filterText}>Toutes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'en attente' && styles.activeFilter]}
-            onPress={() => setFilter('en attente')}
-          >
-            <Text style={styles.filterText}>En attente</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'expédiées' && styles.activeFilter]}
-            onPress={() => setFilter('expédiées')}
-          >
-            <Text style={styles.filterText}>Expédiées</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'complétées' && styles.activeFilter]}
-            onPress={() => setFilter('complétées')}
-          >
-            <Text style={styles.filterText}>Complétées</Text>
-          </TouchableOpacity>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement des commandes...</Text>
         </View>
+      ) : (
+        <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Filtres</Text>
+            </View>
+            <View style={styles.searchContainer}>
+              <Icon name="search" size={18} color="#A0AEC0" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Rechercher commandes..."
+                placeholderTextColor="#A0AEC0"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContainer}
+            >
+              {['toutes', 'en attente', 'expédiées', 'complétées'].map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.filterButton,
+                    filter === item && styles.activeFilterButton,
+                  ]}
+                  onPress={() => setFilter(item)}
+                >
+                  <Text style={[
+                    styles.filterText,
+                    filter === item && styles.activeFilterText,
+                  ]}>
+                    {item.charAt(0).toUpperCase() + item.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {filteredOrders.length} commande(s) trouvée(s)
+          <Text style={styles.resultsText}>
+            {filteredOrders.length} {filteredOrders.length === 1 ? 'commande' : 'commandes'} {filter === 'toutes' ? '' : `(${filter})`}
           </Text>
+
           <FlatList
             data={filteredOrders}
             renderItem={renderOrder}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.ordersList}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>Aucune commande trouvée</Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="package" size={48} color="#CBD5E0" />
+                <Text style={styles.emptyText}>Aucune commande trouvée</Text>
+                {fetchError && (
+                  <Text style={styles.emptySubtext}>
+                    Une erreur est survenue lors de la récupération des commandes.
+                  </Text>
+                )}
+                {!fetchError && (
+                  <Text style={styles.emptySubtext}>
+                    Aucune commande ne correspond à vos critères.
+                  </Text>
+                )}
+              </View>
             }
           />
-        </View>
-      </Animated.View>
+        </Animated.View>
+      )}
 
       <BottomNavigation />
-    </SafeAreaView> 
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
-  },
-  headerGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 50,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    position: 'relative',
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
+    justifyContent: 'space-between',
   },
   backButton: {
     padding: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 10,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '40%',
   },
   contentContainer: {
-    padding: 16,
     flex: 1,
-  },
-  searchInput: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 12,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  filterButton: {
-    padding: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    flex: 1,
-    alignItems: 'center',
-  },
-  activeFilter: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  filterText: {
-    color: '#111827',
-    fontWeight: '600',
+    paddingHorizontal: 16,
+    paddingBottom: 80,
   },
   section: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+    paddingBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  orderCard: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    elevation: 1,
+    backgroundColor: '#EBF8FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
   },
-  orderIcon: {
-    width: 40,
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    fontSize: 15,
+    color: '#1A202C',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: '#EDF2F7',
+  },
+  activeFilterButton: {
+    backgroundColor: '#38A169',
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4A5568',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  activeFilterText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  resultsText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#718096',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  ordersList: {
+    paddingBottom: 16,
+  },
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+    paddingBottom: 12,
+  },
+  orderId: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A202C',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusPending: {
+    backgroundColor: '#FEFCBF',
+  },
+  statusShipped: {
+    backgroundColor: '#BEE3F8',
+  },
+  statusCompleted: {
+    backgroundColor: '#C6F6D5',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A202C',
+  },
+  orderBody: {
+    marginBottom: 12,
+  },
+  orderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EBF8FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  orderDetails: {
-    flex: 1,
+  orderText: {
+    fontSize: 15,
+    color: '#1A202C',
   },
-  orderId: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+    paddingTop: 12,
   },
-  orderCustomer: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  orderDate: {
+  totalLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  orderStatus: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+    fontWeight: '500',
+    color: '#718096',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   orderTotal: {
-    fontSize: 12,
-    color: '#10B981',
-    marginTop: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A202C',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
   },
   emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
     fontSize: 16,
-    marginTop: 20,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 15,
+    color: '#718096',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
-    textAlign: 'center',
-    color: '#6B7280',
     fontSize: 16,
-    marginTop: 50,
+    fontWeight: '600',
+    color: '#2D3748',
   },
 });
 
