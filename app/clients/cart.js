@@ -42,6 +42,7 @@ const PanierScreen = () => {
     const fetchUserData = async () => {
       try {
         const userToken = await AsyncStorage.getItem("user");
+
         if (!userToken) {
           console.error("Aucun token trouvé");
           return;
@@ -92,7 +93,7 @@ const PanierScreen = () => {
       const data = await response.json();
       console.log("Articles récupérés :", data.data);
   
-      // 🔥 Correction : Vérifier et enregistrer l'ID du panier
+      //Correction : Vérifier et enregistrer l'ID du panier
       if (data.data.length > 0) {
         await AsyncStorage.setItem("panier", data.data[0].id.toString());
         console.log("ID du panier enregistré :", data.data[0].id);
@@ -133,7 +134,9 @@ const PanierScreen = () => {
   };
 
   // Nouvelle fonction handleClearCart
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
+    const panierId = await AsyncStorage.getItem('panier');
+
     Alert.alert(
       "Vider le panier",
       "Êtes-vous sûr de vouloir supprimer tous les articles du panier ?",
@@ -145,7 +148,7 @@ const PanierScreen = () => {
             setIsLoading(true);
             try {
               const response = await fetch(
-                `http://195.35.24.128:8081/api/paniers/client/clear/${userId}`,
+                `http://195.35.24.128:8081/api/paniers/client/delete/${panierId}`,
                 {
                   method: "DELETE",
                   headers: {
@@ -161,6 +164,7 @@ const PanierScreen = () => {
 
               setArticles([]);
               Alert.alert("Succès", "Le panier a été vidé.");
+              console.log("panier vider avec succes !");
             } catch (error) {
               console.error("Erreur lors de la vidange du panier:", error);
               Alert.alert("Erreur", "Impossible de vider le panier.");
