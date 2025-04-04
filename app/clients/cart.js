@@ -24,7 +24,7 @@ const PanierScreen = () => {
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [panierId, setPanierId] = useState(null); // Ajout pour stocker l'ID du panier
+  const [panierId, setPanierId] = useState(null);
   const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -91,11 +91,11 @@ const PanierScreen = () => {
       }
 
       const data = await response.json();
-      console.log("Réponse complète:", data);
+      console.log("Réponse complète (fetchCartData):", data);
 
-      if (data.status === "success" && data.data.length > 0) {
+      if (data.status === "success" && data.data && data.data.length > 0) {
         await AsyncStorage.setItem("panier", data.data[0].id.toString());
-        setPanierId(data.data[0].id); // Stocker l'ID du panier
+        setPanierId(data.data[0].id);
 
         const transformedArticles = data.data[0].produits.map((produit) => ({
           id: produit.idProduit.toString(),
@@ -127,7 +127,6 @@ const PanierScreen = () => {
       return;
     }
 
-    // Optimisation locale temporaire
     setArticles(prevArticles =>
       prevArticles.map(article =>
         article.id === id
@@ -136,7 +135,6 @@ const PanierScreen = () => {
       )
     );
 
-    // Préparer les données pour l'API
     const updatedProducts = articles.map(article => ({
       idProduit: parseInt(article.id),
       quantite: article.id === id 
@@ -169,31 +167,97 @@ const PanierScreen = () => {
       }
 
       const data = await response.json();
-      console.log("Mise à jour réussie:", data);
+      console.log("Réponse complète (updateQuantity):", data);
 
-      // Synchroniser avec la réponse du serveur
-      const updatedArticles = data.data.produits.map((produit) => ({
-        id: produit.idProduit.toString(),
-        name: produit.nom || "Produit inconnu",
-        price: produit.prix || 0,
-        quantity: produit.quantite || 1,
-        image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
-        description: produit.description || "Aucune description",
-        vendor: produit.vendeurNom || "Vendeur inconnu",
-        dateAjout: produit.dateAjout || new Date().toISOString(),
-      }));
+      if (data.status === "success" && data.data && data.data.produits) {
+        const updatedArticles = data.data.produits.map((produit) => ({
+          id: produit.idProduit.toString(),
+          name: produit.nom || "Produit inconnu",
+          price: produit.prix || 0,
+          quantity: produit.quantite || 1,
+          image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
+          description: produit.description || "Aucune description",
+          vendor: produit.vendeurNom || "Vendeur inconnu",
+          dateAjout: produit.dateAjout || new Date().toISOString(),
+        }));
 
-      setArticles(updatedArticles);
+        setArticles(updatedArticles);
+      } else {
+        console.warn("Réponse inattendue de l'API, rechargement des données");
+        await fetchCartData(userId, token);
+      }
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la quantité:", error);
       Alert.alert("Erreur", "Impossible de mettre à jour la quantité");
-      // Recharger les données en cas d'échec pour rester synchronisé
-      fetchCartData(userId, token);
+      await fetchCartData(userId, token);
     }
   };
 
-  const removeArticle = (id) => {
-    setArticles(prevArticles => prevArticles.filter(article => article.id !== id));
+  const removeArticle = async (id) => {
+    if (!panierId || !userId || !token) {
+      console.error("Informations manquantes pour la suppression");
+      return;
+    }
+
+    // Mise à jour optimiste locale
+    const updatedArticles = articles.filter(article => article.id !== id);
+    setArticles(updatedArticles);
+
+    // Préparer les données pour l'API (exclure le produit supprimé)
+    const updatedProducts = updatedArticles.map(article => ({
+      idProduit: parseInt(article.id),
+      quantite: article.quantity,
+      dateAjout: article.dateAjout,
+    }));
+
+    const payload = {
+      id: panierId,
+      produits: updatedProducts,
+      clientId: parseInt(userId),
+    };
+
+    try {
+      const response = await fetch(
+        "http://195.35.24.128:8081/api/paniers/client/update",
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Réponse complète (removeArticle):", data);
+
+      if (data.status === "success" && data.data && data.data.produits) {
+        const newArticles = data.data.produits.map((produit) => ({
+          id: produit.idProduit.toString(),
+          name: produit.nom || "Produit inconnu",
+          price: produit.prix || 0,
+          quantity: produit.quantite || 1,
+          image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
+          description: produit.description || "Aucune description",
+          vendor: produit.vendeurNom || "Vendeur inconnu",
+          dateAjout: produit.dateAjout || new Date().toISOString(),
+        }));
+
+        setArticles(newArticles);
+      } else {
+        console.warn("Réponse inattendue de l'API, rechargement des données");
+        await fetchCartData(userId, token);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'article:", error);
+      Alert.alert("Erreur", "Impossible de supprimer l'article");
+      await fetchCartData(userId, token); // Recharger pour rester synchronisé
+    }
   };
 
   const handleClearCart = async () => {
@@ -636,4 +700,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PanierScreen; 
+export default PanierScreen;
