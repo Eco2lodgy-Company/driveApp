@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../../AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BottomNavigation from './components/BottomNavigation'; // Importation ajoutée
+import BottomNavigation from './components/BottomNavigation';
 
 const SellerProfileScreen = () => {
   const router = useRouter();
@@ -23,6 +23,7 @@ const SellerProfileScreen = () => {
   const [shopProfile, setShopProfile] = useState({});
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -64,7 +65,6 @@ const SellerProfileScreen = () => {
       }
 
       const data = await response.json();
-      console.log("Données reçues :", data.data);
       setShopProfile(data.data || {});
       const imageUrl = convertPathToUrl(data.data?.bannerPath);
       setImageUrl(imageUrl);
@@ -77,14 +77,9 @@ const SellerProfileScreen = () => {
     const fetchData = async () => {
       try {
         const userToken = await AsyncStorage.getItem("user");
-
-        if (!userToken) {
-          console.error("Aucun token trouvé");
-          return;
-        }
+        if (!userToken) return;
 
         const parsedToken = JSON.parse(userToken);
-        console.log("Token trouvé :", parsedToken.token);
         await fetchShopData(parsedToken.id, parsedToken.token);
       } catch (error) {
         console.error("Erreur lors de la récupération du token :", error.message);
@@ -96,17 +91,16 @@ const SellerProfileScreen = () => {
 
   const handleLogout = async () => {
     try {
-        console.log('Déconnexion', 'Vous avez été déconnecté avec succès.');
-        await logout();
-        router.push('/login');
+      await logout();
+      router.push('/login');
     } catch (error) {
-        console.error('Erreur lors de la déconnexion :', error);
+      console.error('Erreur lors de la déconnexion :', error);
     }
-};
-
+  };
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.container}>
+      {/* Header animé */}
       <Animated.View style={[styles.header, {
         opacity: headerAnim,
         transform: [{
@@ -116,166 +110,205 @@ const SellerProfileScreen = () => {
           }),
         }],
       }]}>
-        <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.push('vendeurs/home')}
-            >
-              <Icon name="arrow-left" size={20} color="#111827" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{shopProfile.nom || 'Profil Boutique'}</Text>
-          </View>
-        </LinearGradient>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.push('vendeurs/home')}
+          >
+            <Icon name="chevron-left" size={24} color="#4A5568" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{shopProfile.nom || 'Profil Boutique'}</Text>
+          <View style={{ width: 24 }} /> {/* Pour l'alignement */}
+        </View>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Animated.View style={[styles.profileImageContainer, { opacity: fadeAnim }]}>
+        {/* Bannière de la boutique */}
+        <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim }]}>
           <Image
             source={{ uri: imgUrl || 'https://via.placeholder.com/150' }}
-            style={styles.profileImage}
+            style={styles.bannerImage}
             resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.7)', 'transparent']}
+            style={styles.bannerOverlay}
           />
         </Animated.View>
 
+        {/* Section d'informations */}
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Informations de la boutique</Text>
+          </View>
+
           {[
-            { icon: 'info', label: shopProfile.description || 'Description non disponible' },
-            { icon: 'mail', label: shopProfile.email || 'Email non disponible' },
-            { icon: 'phone', label: shopProfile.telephone || 'Téléphone non disponible' },
-            { icon: 'map-pin', label: shopProfile.adresse || 'Adresse non disponible' },
+            { icon: 'info', label: 'Description', value: shopProfile.description || 'Non renseignée' },
+            { icon: 'mail', label: 'Email', value: shopProfile.email || 'Non renseigné' },
+            { icon: 'phone', label: 'Téléphone', value: shopProfile.telephone || 'Non renseigné' },
+            { icon: 'map-pin', label: 'Adresse', value: shopProfile.adresse || 'Non renseignée' },
           ].map((item, index) => (
-            <View key={index} style={styles.infoCard}>
-              <View style={styles.infoIcon}>
-                <Icon name={item.icon} size={20} color="#6B7280" />
+            <View key={index} style={styles.infoItem}>
+              <View style={styles.infoIconContainer}>
+                <Icon name={item.icon} size={18} color="#4A5568" />
               </View>
-              <Text style={styles.infoText}>{item.label}</Text>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>{item.label}</Text>
+                <Text style={styles.infoValue}>{item.value}</Text>
+              </View>
             </View>
           ))}
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => router.push('/sellers/edit-profile')}
-            >
-              <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.actionGradient}>
-                <Icon name="edit" size={20} color="#fff" />
-                <Text style={styles.actionText}>Modifier</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleLogout}
-            >
-              <LinearGradient colors={['#F44336', '#D32F2F']} style={styles.actionGradient}>
-                <Icon name="log-out" size={20} color="#fff" />
-                <Text style={styles.actionText}>Déconnexion</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
         </Animated.View>
+
+        {/* Boutons d'action */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => router.push('/sellers/edit-profile')}
+          >
+            <Icon name="edit-3" size={18} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Modifier le profil</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.logoutButton]}
+            onPress={handleLogout}
+          >
+            <Icon name="log-out" size={18} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Se déconnecter</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-      <BottomNavigation /> {/* Composant ajouté */}
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    paddingTop: 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
-  },
-  headerGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-  },
   backButton: {
     padding: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 10,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 80, // Ajusté pour laisser de l'espace à BottomNavigation
-  },
-  profileImageContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: '90%',
-    height: 150,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  section: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    textAlign: 'center',
     flex: 1,
   },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  scrollContent: {
+    paddingBottom: 80,
   },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+  bannerContainer: {
+    height: 180,
+    marginBottom: 24,
+    position: 'relative',
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: '40%',
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+    paddingBottom: 12,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EBF8FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  infoText: {
-    fontSize: 14,
-    color: '#6B7280',
+  infoTextContainer: {
     flex: 1,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#718096',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#1A202C',
+  },
+  actionsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
   actionButton: {
-    flex: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  actionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
   },
-  actionText: {
-    color: '#fff',
+  editButton: {
+    backgroundColor: '#38A169',
+  },
+  logoutButton: {
+    backgroundColor: '#E53E3E',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
-    fontSize: 16,
   },
 });
 
