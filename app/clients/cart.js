@@ -636,4 +636,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PanierScreen;
+export default PanierScreen; 
