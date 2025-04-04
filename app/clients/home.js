@@ -80,6 +80,7 @@ const HomeScreen = () => {
       }
 
       const cartData = await checkResponse.json();
+      console.log('Réponse complète de l\'API liste:', JSON.stringify(cartData, null, 2));
 
       if (!cartData?.data || !Array.isArray(cartData.data)) {
         throw new Error('Structure de réponse invalide');
@@ -110,16 +111,36 @@ const HomeScreen = () => {
         Alert.alert('Succès', `${product.name} ajouté à un nouveau panier`);
       } else {
         const existingCart = cartData.data[0];
+        console.log('Panier existant extrait:', JSON.stringify(existingCart, null, 2));
 
+        // Récupération et filtrage des produits existants
+        const existingProductsRaw = existingCart.produits || []; // Ajustez si le champ a un autre nom
+        const existingProducts = existingProductsRaw.map(item => ({
+          idProduit: item.idProduit,
+          quantite: item.quantite,
+          dateAjout: item.dateAjout
+        }));
+        console.log('Produits existants filtrés:', JSON.stringify(existingProducts, null, 2));
+
+        // Création du nouveau produit
+        const newProduct = {
+          idProduit: product.id,
+          quantite: quantity,
+          dateAjout: new Date().toISOString()
+        };
+
+        // Combinaison des produits existants filtrés avec le nouveau
+        const updatedProducts = [...existingProducts, newProduct];
+        console.log('Liste des produits mise à jour:', JSON.stringify(updatedProducts, null, 2));
+
+        // Données pour la mise à jour
         const updateData = {
           id: existingCart.id,
-          produits: [{
-            idProduit: product.id,
-            quantite: quantity,
-            dateAjout: new Date().toISOString()
-          }],
+          produits: updatedProducts,
           clientId: userData.id
         };
+
+        console.log('Données envoyées à l\'API de mise à jour:', JSON.stringify(updateData, null, 2));
 
         const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
           method: 'PUT',
@@ -130,10 +151,12 @@ const HomeScreen = () => {
           body: JSON.stringify(updateData)
         });
 
+        const updateResponseText = await updateResponse.text();
+        console.log('Réponse de l\'API après mise à jour:', updateResponseText);
+
         if (!updateResponse.ok) {
-          const errorText = await updateResponse.text();
-          console.error('Réponse serveur:', errorText);
-          throw new Error(`Erreur mise à jour: ${errorText}`);
+          console.error('Réponse serveur:', updateResponseText);
+          throw new Error(`Erreur mise à jour: ${updateResponseText}`);
         }
 
         Alert.alert('Succès', `${product.name} ajouté au panier`);
@@ -141,10 +164,9 @@ const HomeScreen = () => {
       }
     } catch (error) {
       console.error('Erreur complète:', error);
-      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message}`);
+      Alert.alert('Erreur', `Échec de l\'ajout au panier: ${error.message}`);
     }
-  };
-
+};
   useEffect(() => {
     const fetchCategories = async () => {
       if (!userData || !userData.token) {
