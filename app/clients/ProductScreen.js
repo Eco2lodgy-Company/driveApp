@@ -159,23 +159,34 @@ const ProductScreen = () => {
         console.log('Panier existant extrait:', JSON.stringify(existingCart, null, 2));
         
         // Récupération et filtrage des produits existants
-        const existingProductsRaw = existingCart.produits || []; // Ajustez si le champ a un autre nom
+        const existingProductsRaw = existingCart.produits || [];
         const existingProducts = existingProductsRaw.map(product => ({
           idProduit: product.idProduit,
           quantite: product.quantite,
           dateAjout: product.dateAjout
         }));
-        console.log('Produits existants filtrés:', JSON.stringify(existingProducts, null, 2));
         
-        // Création du nouveau produit
-        const newProduct = {
-          idProduit: product.id,
-          quantite: quantity,
-          dateAjout: new Date().toISOString()
-        };
+        // Vérifier si le produit existe déjà
+        const productIndex = existingProducts.findIndex(p => p.idProduit === product.id);
         
-        // Combinaison des produits existants filtrés avec le nouveau
-        const updatedProducts = [...existingProducts, newProduct];
+        let updatedProducts;
+        if (productIndex >= 0) {
+          // Si le produit existe, incrémenter la quantité
+          updatedProducts = existingProducts.map((p, index) => 
+            index === productIndex 
+              ? { ...p, quantite: p.quantite + quantity }
+              : p
+          );
+        } else {
+          // Si le produit n'existe pas, l'ajouter
+          const newProduct = {
+            idProduit: product.id,
+            quantite: quantity,
+            dateAjout: new Date().toISOString()
+          };
+          updatedProducts = [...existingProducts, newProduct];
+        }
+        
         console.log('Liste des produits mise à jour:', JSON.stringify(updatedProducts, null, 2));
         
         // Données pour la mise à jour
