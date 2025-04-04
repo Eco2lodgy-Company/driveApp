@@ -126,7 +126,7 @@ const PaymentScreen = () => {
 
   const closeModalAndRedirect = () => {
     setShowSuccessModal(false);
-    router.push('/clients/order-confirmation');
+    router.push('clients/home');
   };
 
   const renderCartItem = (item) => (
