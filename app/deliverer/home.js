@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect,useContext, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,19 +9,27 @@ import {
   FlatList,
   Animated,
   Modal,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { LocationContext } from '../../LocationContext'; // Assurez-vous que le chemin est correct
 
 const LivraisonsScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const [selectedLivraison, setSelectedLivraison] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isDisponible, setIsDisponible] = useState(false); // État initial par défaut
+  const [userData, setUserData] = useState(null);
+  const { location } = useContext(LocationContext);
+  const [deliveriesData,setDeliveriesData]=useState([]);
 
   const stats = {
-    revenuJournee: 245.75, // Revenu de la journée
-    livraisonsEnAttente: 3, // Nombre de livraisons en attente
+    revenuJournee: 245.75,
+    livraisonsEnAttente: 3,
   };
 
   const livraisons = [
@@ -41,9 +49,110 @@ const LivraisonsScreen = () => {
       composition: ['Ordinateur', 'Souris'],
       date: 'Hier',
     },
-    
   ];
 
+  // Récupération des données utilisateur depuis AsyncStorag
+
+  // Récupération des informations du livreur via l'API
+  useEffect(() => {
+    const fetchLivreurData = async () => {
+     
+      try {
+            const storedData = await AsyncStorage.getItem('user'); // Récupération du token
+            if (!storedData) {
+              console.error("Aucun token trouvé !");
+              return;
+            }
+        
+            const Data = JSON.parse(storedData); // Convertir la chaîne en objet JSON
+            
+        
+            if (!Data.email || !Data.token) {
+              console.error("Données du token incomplètes !");
+              return;
+            }
+            console.log("Données du token récupérées avec succès !", Data);
+        const response = await fetch(
+          `http://195.35.24.128:8081/api/livreurs/findById?id=${Data.id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${Data.token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+        console.log("response",response); 
+
+        const deliver = await response.json();
+        // Supposons que la réponse contient un champ "disponible" (à adapter selon le format réel)
+       
+         setUserData(deliver.data); // Stocker les données utilisateur
+         console.log("Données du livreur récupérées avec succès !", deliver);
+         setIsDisponible(deliver.data.disponibilite); // Mettre à jour l'état de disponibilité
+          console.log("deki state",deliver.data.disponibilite); // Stocker les données utilisateur
+        
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données du livreur:', error);
+      }
+    };
+
+    const fetchLivraisonsData = async () => {
+     
+      try {
+            const storedData = await AsyncStorage.getItem('user'); // Récupération du token
+            if (!storedData) {
+              console.error("Aucun token trouvé !");
+              return;
+            }
+        
+            const Data = JSON.parse(storedData); // Convertir la chaîne en objet JSON
+            
+        
+            if (!Data.email || !Data.token) {
+              console.error("Données du token incomplètes !");
+              return;
+            }
+            console.log("Données du token récupérées avec succès !", Data);
+        const response = await fetch(
+          `http://195.35.24.128:8081/api/commandes/livreur/liste?idLivreur=${Data.id}&longitude=${location.longitude}&latitude=${location.latitude}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${Data.token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+        console.log("response",response); 
+
+        const deliveries = await response.json();
+        setDeliveriesData(deliveries.data); // Stocker les données utilisateur
+        // Supposons que la réponse contient un champ "disponible" (à adapter selon le format réel)
+       
+        //  setUserData(deliver.data); // Stocker les données utilisateur
+         console.log(deliveries.message, deliveries.data);
+        //  setIsDisponible(deliver.data.disponibilite); // Mettre à jour l'état de disponibilité
+          console.log("deliveries data",deliveries.data); // Stocker les données utilisateur
+        
+      } catch (error) {
+        console.error('Erreur lors de la récupération des livraisons', error);
+      }
+    };
+
+    fetchLivreurData();
+    fetchLivraisonsData();
+  }, []);
+
+  // Animation au chargement
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -59,6 +168,51 @@ const LivraisonsScreen = () => {
       }),
     ]).start();
   }, []);
+
+  // Fonction pour changer la disponibilité via l'API
+  const toggleAvailability = async () => {
+    // if (!userData || !userData.token || !userData.id) {
+    //   alert('Utilisateur non authentifié');
+    //   return;
+    // }
+
+    const newDisponible = !isDisponible;
+    try {
+      const storedData = await AsyncStorage.getItem('user'); // Récupération du token
+      if (!storedData) {
+        console.error("Aucun token trouvé !");
+        return;
+      }
+  
+      const Data = JSON.parse(storedData); // Convertir la chaîne en objet JSON
+      
+  
+      if (!Data.email || !Data.token) {
+        console.error("Données du token incomplètes !");
+        return;
+      }
+      const response = await fetch(
+        `http://195.35.24.128:8081/api/livreurs/changeAvailability/${Data.id}?isDisponible=${newDisponible}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${Data.token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      setIsDisponible(newDisponible);
+      alert(`Disponibilité mise à jour: ${newDisponible ? 'Disponible' : 'Non disponible'}`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la disponibilité:', error);
+      alert('Erreur lors de la mise à jour de la disponibilité');
+    }
+  };
 
   const handlePrendreLivraison = () => {
     alert(`Vous avez pris la livraison #${selectedLivraison.id}`);
@@ -92,27 +246,44 @@ const LivraisonsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Animated.View style={[styles.header, {
-        opacity: headerAnim,
-        transform: [{
-          translateY: headerAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-20, 0],
-          }),
-        }],
-      }]}>
-        <LinearGradient
-          colors={['#fff', '#F9FAFB']}
-          style={styles.headerGradient}
-        >
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient colors={['#fff', '#F9FAFB']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Livraisons</Text>
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => alert('Profil')}
-            >
-              <Icon name="user" size={20} color="#111827" />
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleLabel}>
+                  {isDisponible ? 'Disponible' : 'Non disponible'}
+                </Text>
+                <Switch
+                  onValueChange={toggleAvailability}
+                  value={isDisponible}
+                  trackColor={{ false: '#F44336', true: '#4CAF50' }}
+                  thumbColor={isDisponible ? '#fff' : '#fff'}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => alert('Profil')}
+              >
+                <Icon name="user" size={20} color="#111827" />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
       </Animated.View>
@@ -137,7 +308,7 @@ const LivraisonsScreen = () => {
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <Text style={styles.sectionTitle}>Livraisons disponibles</Text>
           <FlatList
-            data={livraisons}
+            data={deliveriesData}
             renderItem={renderLivraison}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
@@ -155,7 +326,6 @@ const LivraisonsScreen = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Détails de la livraison #{selectedLivraison?.id}</Text>
 
-            {/* Lieu de la boutique */}
             <View style={styles.infoSection}>
               <Icon name="shopping-bag" size={18} color="#4CAF50" />
               <View style={styles.infoTextContainer}>
@@ -165,7 +335,6 @@ const LivraisonsScreen = () => {
               </View>
             </View>
 
-            {/* Lieu de livraison */}
             <View style={styles.infoSection}>
               <Icon name="map-pin" size={18} color="#F59E0B" />
               <View style={styles.infoTextContainer}>
@@ -174,7 +343,6 @@ const LivraisonsScreen = () => {
               </View>
             </View>
 
-            {/* Composition du colis */}
             <View style={styles.infoSection}>
               <Icon name="package" size={18} color="#3B82F6" />
               <View style={styles.infoTextContainer}>
@@ -185,15 +353,7 @@ const LivraisonsScreen = () => {
               </View>
             </View>
 
-            {/* Boutons Prendre/Laisser */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.takeButton]}
-                onPress={handlePrendreLivraison}
-              >
-                <Text style={styles.buttonText}>Prendre la livraison</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.button, styles.leaveButton]}
                 onPress={handleLaisserLivraison}
@@ -202,7 +362,6 @@ const LivraisonsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Bouton Fermer */}
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setModalVisible(false)}
@@ -240,6 +399,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     color: '#111827',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    color: '#111827',
+    marginRight: 8,
   },
   profileButton: {
     padding: 8,
@@ -376,9 +549,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
     marginHorizontal: 5,
-  },
-  takeButton: {
-    backgroundColor: '#4CAF50',
   },
   leaveButton: {
     backgroundColor: '#F44336',
