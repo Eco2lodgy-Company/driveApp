@@ -236,10 +236,12 @@ const LivraisonsScreen = () => {
       <View style={styles.livraisonIcon}>
         <Icon name="truck" size={20} color="#6B7280" />
       </View>
-      <View style={styles.livraisonDetails}>
-        <Text style={styles.livraisonId}>#{item.id}</Text>
-        <Text style={styles.livraisonAdresse}>{item.adresseLivraison}</Text>
-        <Text style={styles.livraisonDate}>{item.date}</Text>
+      <View style={styles.clientNom}>
+        <Text style={styles.livraisonId}>{item.id}</Text>
+        <Text style={styles.livraisonId}>Fleur Rose</Text>
+        <Text style={styles.livraisonAdresse}>Pour {item.clientNom}</Text>
+        <Text style={styles.livraisonAdresse}>De China Town à Central Park</Text>
+        <Text style={styles.livraisonDate}>{item.createdAt}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -330,8 +332,8 @@ const LivraisonsScreen = () => {
               <Icon name="shopping-bag" size={18} color="#4CAF50" />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Boutique</Text>
-                <Text style={styles.infoText}>{selectedLivraison?.boutique}</Text>
-                <Text style={styles.infoSubText}>{selectedLivraison?.adresseBoutique}</Text>
+                <Text style={styles.infoText}>{selectedLivraison?.clientNom}</Text>
+                <Text style={styles.infoSubText}>{selectedLivraison?.clientEmail}</Text>
               </View>
             </View>
 
@@ -339,7 +341,7 @@ const LivraisonsScreen = () => {
               <Icon name="map-pin" size={18} color="#F59E0B" />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Lieu de livraison</Text>
-                <Text style={styles.infoText}>{selectedLivraison?.adresseLivraison}</Text>
+                <Text style={styles.infoText}>Central Park</Text>
               </View>
             </View>
 
@@ -347,20 +349,20 @@ const LivraisonsScreen = () => {
               <Icon name="package" size={18} color="#3B82F6" />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Composition du colis</Text>
-                {selectedLivraison?.composition.map((item, index) => (
+                {/* {selectedLivraison?.composition.map((item, index) => (
                   <Text key={index} style={styles.infoSubText}>- {item}</Text>
-                ))}
+                ))} */}
               </View>
             </View>
 
-            <View style={styles.buttonContainer}>
+            {/* <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={[styles.button, styles.leaveButton]}
                 onPress={handleLaisserLivraison}
               >
                 <Text style={styles.buttonText}>Laisser la livraison</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             <TouchableOpacity
               style={styles.closeButton}
