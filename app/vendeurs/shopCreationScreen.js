@@ -254,9 +254,10 @@ const ShopCreationScreen = () => {
       console.log('Tentative de redirection vers /Vendeurs/home');
       const Loginresponse = await login(formData.email, formData);
       if (Loginresponse?.message) {
-        Alert.alert(Loginresponse.message);
+        //deactiver temporairement Alert.alert(Loginresponse.message);
+        router.push('vendeurs/home');
       } else {
-        router.push('/vendeurs/home');
+        router.push('vendeurs/home');
       }
     } catch (error) {
       console.error('Erreur dans handleCreateShop :', error);
