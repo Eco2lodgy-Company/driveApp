@@ -24,6 +24,7 @@ const PanierScreen = () => {
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [panierId, setPanierId] = useState(null); // Ajout pour stocker l'ID du panier
   const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -94,7 +95,7 @@ const PanierScreen = () => {
 
       if (data.status === "success" && data.data.length > 0) {
         await AsyncStorage.setItem("panier", data.data[0].id.toString());
-        console.log("ID du panier enregistré :", data.data[0].id);
+        setPanierId(data.data[0].id); // Stocker l'ID du panier
 
         const transformedArticles = data.data[0].produits.map((produit) => ({
           id: produit.idProduit.toString(),
@@ -104,6 +105,7 @@ const PanierScreen = () => {
           image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
           description: produit.description || "Aucune description",
           vendor: produit.vendeurNom || "Vendeur inconnu",
+          dateAjout: produit.dateAjout || new Date().toISOString(),
         }));
 
         setArticles(transformedArticles);
@@ -119,13 +121,75 @@ const PanierScreen = () => {
     }
   };
 
-  const updateQuantity = (id, quantity) => {
-    const parsedQty = parseInt(quantity) || 1;
+  const updateQuantity = async (id, newQuantity) => {
+    if (!panierId || !userId || !token) {
+      console.error("Informations manquantes pour la mise à jour");
+      return;
+    }
+
+    // Optimisation locale temporaire
     setArticles(prevArticles =>
       prevArticles.map(article =>
-        article.id === id ? { ...article, quantity: Math.max(1, parsedQty) } : article
+        article.id === id
+          ? { ...article, quantity: Math.max(1, typeof newQuantity === 'number' ? newQuantity : parseInt(newQuantity) || article.quantity) }
+          : article
       )
     );
+
+    // Préparer les données pour l'API
+    const updatedProducts = articles.map(article => ({
+      idProduit: parseInt(article.id),
+      quantite: article.id === id 
+        ? Math.max(1, typeof newQuantity === 'number' ? newQuantity : parseInt(newQuantity) || article.quantity) 
+        : article.quantity,
+      dateAjout: article.dateAjout,
+    }));
+
+    const payload = {
+      id: panierId,
+      produits: updatedProducts,
+      clientId: parseInt(userId),
+    };
+
+    try {
+      const response = await fetch(
+        "http://195.35.24.128:8081/api/paniers/client/update",
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Mise à jour réussie:", data);
+
+      // Synchroniser avec la réponse du serveur
+      const updatedArticles = data.data.produits.map((produit) => ({
+        id: produit.idProduit.toString(),
+        name: produit.nom || "Produit inconnu",
+        price: produit.prix || 0,
+        quantity: produit.quantite || 1,
+        image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
+        description: produit.description || "Aucune description",
+        vendor: produit.vendeurNom || "Vendeur inconnu",
+        dateAjout: produit.dateAjout || new Date().toISOString(),
+      }));
+
+      setArticles(updatedArticles);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la quantité:", error);
+      Alert.alert("Erreur", "Impossible de mettre à jour la quantité");
+      // Recharger les données en cas d'échec pour rester synchronisé
+      fetchCartData(userId, token);
+    }
   };
 
   const removeArticle = (id) => {
@@ -161,6 +225,7 @@ const PanierScreen = () => {
               }
 
               setArticles([]);
+              setPanierId(null);
               Alert.alert("Succès", "Le panier a été vidé.");
               console.log("Panier vidé avec succès !");
             } catch (error) {

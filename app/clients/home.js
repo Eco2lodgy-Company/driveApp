@@ -66,6 +66,7 @@ const HomeScreen = () => {
     }
 
     try {
+      // 1. Vérifier si l'utilisateur a déjà un panier
       const checkResponse = await fetch(`http://195.35.24.128:8081/api/paniers/client/liste/${userData.id}`, {
         method: 'GET',
         headers: {
@@ -80,13 +81,16 @@ const HomeScreen = () => {
       }
 
       const cartData = await checkResponse.json();
-      console.log('Réponse complète de l\'API liste:', JSON.stringify(cartData, null, 2));
+      console.log('Réponse panier:', cartData);
 
+      // 2. Vérifier la structure de la réponse
       if (!cartData?.data || !Array.isArray(cartData.data)) {
         throw new Error('Structure de réponse invalide');
       }
 
+      // 3. Gérer selon qu'il y a un panier existant ou non
       if (cartData.data.length === 0) {
+        // Cas 1: Créer un nouveau panier
         const createResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/new', {
           method: 'POST',
           headers: {
@@ -105,66 +109,72 @@ const HomeScreen = () => {
 
         if (!createResponse.ok) {
           const errorText = await createResponse.text();
-          throw new Error(`Erreur création: ${errorText}`);
+          throw new Error(`Erreur création panier: ${errorText}`);
         }
 
         Alert.alert('Succès', `${product.name} ajouté à un nouveau panier`);
       } else {
+        // Cas 2: Mettre à jour le panier existant
         const existingCart = cartData.data[0];
-        console.log('Panier existant extrait:', JSON.stringify(existingCart, null, 2));
+        
+        // Normaliser les produits (certaines API renvoient parfois des structures différentes)
+        const existingProducts = Array.isArray(existingCart.produits) 
+          ? existingCart.produits.map(p => ({
+              idProduit: p.idProduit || p.id,
+              quantite: p.quantite || 0,
+              dateAjout: p.dateAjout || new Date().toISOString()
+            }))
+          : [];
 
-        // Récupération et filtrage des produits existants
-        const existingProductsRaw = existingCart.produits || []; // Ajustez si le champ a un autre nom
-        const existingProducts = existingProductsRaw.map(item => ({
-          idProduit: item.idProduit,
-          quantite: item.quantite,
-          dateAjout: item.dateAjout
-        }));
-        console.log('Produits existants filtrés:', JSON.stringify(existingProducts, null, 2));
+        // Vérifier si le produit existe déjà
+        const existingProductIndex = existingProducts.findIndex(
+          p => p.idProduit.toString() === product.id.toString()
+        );
 
-        // Création du nouveau produit
-        const newProduct = {
-          idProduit: product.id,
-          quantite: quantity,
-          dateAjout: new Date().toISOString()
-        };
+        let updatedProducts;
+        if (existingProductIndex >= 0) {
+          // Produit existe déjà - mettre à jour la quantité
+          updatedProducts = existingProducts.map((p, index) => 
+            index === existingProductIndex
+              ? { ...p, quantite: (parseInt(p.quantite) + parseInt(quantity)) }
+              : p
+          );
+        } else {
+          // Nouveau produit - l'ajouter
+          updatedProducts = [
+            ...existingProducts,
+            {
+              idProduit: product.id,
+              quantite: quantity,
+              dateAjout: new Date().toISOString()
+            }
+          ];
+        }
 
-        // Combinaison des produits existants filtrés avec le nouveau
-        const updatedProducts = [...existingProducts, newProduct];
-        console.log('Liste des produits mise à jour:', JSON.stringify(updatedProducts, null, 2));
-
-        // Données pour la mise à jour
-        const updateData = {
-          id: existingCart.id,
-          produits: updatedProducts,
-          clientId: userData.id
-        };
-
-        console.log('Données envoyées à l\'API de mise à jour:', JSON.stringify(updateData, null, 2));
-
+        // Envoyer la mise à jour
         const updateResponse = await fetch('http://195.35.24.128:8081/api/paniers/client/update', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${userData.token}`,
           },
-          body: JSON.stringify(updateData)
+          body: JSON.stringify({
+            id: existingCart.id,
+            produits: updatedProducts,
+            clientId: userData.id
+          })
         });
 
-        const updateResponseText = await updateResponse.text();
-        console.log('Réponse de l\'API après mise à jour:', updateResponseText);
-
         if (!updateResponse.ok) {
-          console.error('Réponse serveur:', updateResponseText);
-          throw new Error(`Erreur mise à jour: ${updateResponseText}`);
+          const errorText = await updateResponse.text();
+          throw new Error(`Erreur mise à jour panier: ${errorText}`);
         }
 
         Alert.alert('Succès', `${product.name} ajouté au panier`);
-        console.log(`le produit: ${product.name} a été ajouté au panier avec succès`);
       }
     } catch (error) {
-      console.error('Erreur complète:', error);
-      Alert.alert('Erreur', `Échec de l\'ajout au panier: ${error.message}`);
+      console.error('Erreur handleAddToCart:', error);
+      Alert.alert('Erreur', `Échec de l'ajout au panier: ${error.message || error}`);
     }
 };
   useEffect(() => {
