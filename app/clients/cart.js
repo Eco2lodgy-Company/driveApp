@@ -23,7 +23,6 @@ const PanierScreen = () => {
   const [orderStatus, setOrderStatus] = useState(null);
   const [token, setToken] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
-  const [imgUrl, setImgUrl] = useState('');
   const [userId, setUserId] = useState(null);
   const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -85,32 +84,33 @@ const PanierScreen = () => {
           },
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
-  
+
       const data = await response.json();
-      console.log("Articles récupérés :", data.data);
-  
-      //Correction : Vérifier et enregistrer l'ID du panier
-      if (data.data.length > 0) {
+      console.log("Réponse complète:", data);
+
+      if (data.status === "success" && data.data.length > 0) {
         await AsyncStorage.setItem("panier", data.data[0].id.toString());
         console.log("ID du panier enregistré :", data.data[0].id);
+
+        const transformedArticles = data.data[0].produits.map((produit) => ({
+          id: produit.idProduit.toString(),
+          name: produit.nom || "Produit inconnu",
+          price: produit.prix || 0,
+          quantity: produit.quantite || 1,
+          image: convertPathToUrl(produit.imagePath) || "http://alphatek.fr:8086/default-image.jpeg",
+          description: produit.description || "Aucune description",
+          vendor: produit.vendeurNom || "Vendeur inconnu",
+        }));
+
+        setArticles(transformedArticles);
       } else {
-        console.log("Aucun panier trouvé");
+        console.log("Aucun panier ou produits trouvés");
+        setArticles([]);
       }
-  
-      const transformedArticles = data.data.map((panier) => ({
-        id: panier.id.toString(),
-        name: panier.produits[0]?.nom || "Produit inconnu",
-        price: panier.produits[0]?.prix || 1,
-        quantity: 1,
-        image: convertPathToUrl(panier.produits[0]?.imagePath) || "http://alphatek.fr:8086/c392b637-0c32-4d6b-aad1-a5753b8c3c43_2b16e7bf-6c48-4dc1-b9b0-13b0395109cf.jpeg",
-        description: panier.produits[0]?.description || "Aucune description",
-      }));
-  
-      setArticles(transformedArticles);
     } catch (error) {
       console.error("Erreur lors de la récupération des données:", error);
       Alert.alert("Erreur", "Impossible de charger les données du panier");
@@ -118,7 +118,6 @@ const PanierScreen = () => {
       setIsLoading(false);
     }
   };
-  
 
   const updateQuantity = (id, quantity) => {
     const parsedQty = parseInt(quantity) || 1;
@@ -133,7 +132,6 @@ const PanierScreen = () => {
     setArticles(prevArticles => prevArticles.filter(article => article.id !== id));
   };
 
-  // Nouvelle fonction handleClearCart
   const handleClearCart = async () => {
     const panierId = await AsyncStorage.getItem('panier');
 
@@ -164,7 +162,7 @@ const PanierScreen = () => {
 
               setArticles([]);
               Alert.alert("Succès", "Le panier a été vidé.");
-              console.log("panier vider avec succes !");
+              console.log("Panier vidé avec succès !");
             } catch (error) {
               console.error("Erreur lors de la vidange du panier:", error);
               Alert.alert("Erreur", "Impossible de vider le panier.");
@@ -201,6 +199,7 @@ const PanierScreen = () => {
       <View style={styles.itemContent}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemDescription}>{item.description}</Text>
+        <Text style={styles.vendorText}>Vendu par: {item.vendor}</Text>
         <View style={styles.itemControls}>
           <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
           <View style={styles.quantityControl}>
@@ -414,7 +413,12 @@ const styles = StyleSheet.create({
   itemDescription: {
     fontSize: 13,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  vendorText: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 6,
   },
   itemControls: {
     flexDirection: 'row',
